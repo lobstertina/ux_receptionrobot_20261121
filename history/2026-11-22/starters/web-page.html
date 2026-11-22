@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Web 畫面：寬度跟著殼層畫布走，靠 media query 做 RWD -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.1 頁名</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      /* 本頁專屬版面。斷點與殼層寬度標示一致：≤640 手機、641–1099 平板、≥1100 桌機 */
+      .hero { display: grid; gap: 24px; align-items: center; }
+      @media (min-width: 1100px) {
+        .hero { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Web 頁骨架：複製到 pages/ 改檔名後使用。區塊編號（data-block 屬性與 HTML 註解）為選填，只給程式定位用，不需要對應工程標註卡片；畫面上不顯示任何編號。
+         資訊備註模式（殼層右上「資訊備註」）：工程師要個別看標註的畫面區塊，在元素加 data-note-region="區塊 id"（英文小寫＋連字號，同頁不重複；
+         同一個 id 可標在多個元素上，框線會包住全部）。id 對到 assets/region-notes/<模組字母>.js 的 regions[].id，寫完跑 node scripts/check-region-notes.cjs。
+         一頁通常拆 3～8 個區塊：照使用者會分開理解的單位切（導覽列、篩選列、列表、單一表單欄位、置底操作），不要整頁一塊、也不要每個按鈕一塊。 -->
+    <div class="site">
+      <!-- 區塊 01 導覽列 -->
+      <header class="site-header" data-block="01" data-note-region="topnav">
+        <nav class="container topnav" aria-label="主選單">
+          <span class="topnav__logo" role="img" aria-label="網站標誌"></span>
+          <ul class="topnav__links">
+            <li><a href="#" aria-current="page">首頁</a></li>
+            <li><a href="#">功能</a></li>
+            <li><a href="#">價格</a></li>
+          </ul>
+          <div class="topnav__actions"><a class="btn btn--sm btn--primary" href="#">開始使用</a></div>
+          <button type="button" class="icon-btn topnav__menu" aria-label="開啟選單">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+        </nav>
+      </header>
+
+      <main class="site-main">
+        <!-- 區塊 02 主視覺 -->
+        <section class="section" data-block="02">
+          <div class="container hero">
+            <div class="stack">
+              <h1>主要標題寫在這裡</h1>
+              <p class="text-muted">一段擬真的副標，說明這一頁要使用者完成的事。</p>
+              <!-- 最小表單骨架：有輸入框的頁一律包在 <form> 裡（Enter＝送出），主按鈕 type="submit"；
+                   驗證、錯誤、載入中由頁尾的 WfProto.initForm 掛，頁面不自己寫 submit。
+                   每個輸入框加 data-wf-field 並在 assets/field-rules.js 的 FIELDS 登記（usedOn 含本頁碼）。
+                   沒有輸入框的頁：整個 <form> 刪掉，主按鈕改回 <a class="btn btn--primary" data-wf-code="A1.2">。 -->
+              <form class="form" id="form-main" novalidate>
+                <div class="field" data-note-region="email">
+                  <label class="field__label" for="email">電子郵件</label>
+                  <input class="input" id="email" type="email" placeholder="例：name@example.com" data-wf-field="email" />
+                </div>
+                <div class="row" data-note-region="submit"><button type="submit" class="btn btn--primary" id="submit-main">下一步</button></div>
+              </form>
+            </div>
+            <div class="ph-img" role="img" aria-label="主視覺圖片"></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- 區塊 03 頁尾 -->
+      <footer class="site-footer" data-block="03">
+        <div class="container"><div class="site-footer__bottom">© 2026 公司名稱</div></div>
+      </footer>
+    </div>
+
+    <script src="../assets/proto.js"></script>
+    <script>
+      WfProto.registerPage({
+        defaultCode: "A1.1",
+        apply: function (code, ctx) {
+          // 依頁碼切換畫面
+        },
+      });
+
+      // 表單行為一次掛好：離開欄位檢查、送出時完整檢查並擋住、通過後按鈕「送出中」＋三點、整表單鎖定 700ms 再換頁
+      WfProto.initForm({
+        form: "form-main",
+        submitBtn: "submit-main",
+        fields: [
+          { id: "email", rules: ["required", { test: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim()); }, message: "請輸入完整的 Email，例：name@example.com" }] },
+        ],
+        loadingLabel: "送出中",
+        delay: 700,
+        // 選填：lockForm（預設 true）、clearOnInput、blurSkipEmpty、gateRules，說明見 README「互動原型」
+        onSubmit: function (values) {
+          // 回傳頁碼或檔名就換頁；回傳 null 留在本頁（例：WfProto.toast("已送出")）
+          return "A1.2";
+        },
+      });
+    </script>
+  </body>
+</html>

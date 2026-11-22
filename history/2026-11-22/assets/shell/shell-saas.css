@@ -1,0 +1,707 @@
+/* ============================================================
+   外殼 SaaS 外觀：參考 Untitled UI 元件語彙。
+   品牌色只有一個變數 --brand（預設中性灰）；專案要換色，改 wireframe.config.js 的 shellBrandColor，
+   殼層載入時會把它寫進 --brand，下面的色階 25～900 全部由它混白／混黑算出來，不用逐一填色碼。
+   只蓋殼層 index.html 的外框——上方列、左側頁面選單、中間畫布底、右側面板、模式切換、資訊備註面板；
+   線框內頁（pages/）不受影響。載入順序在 assets/shell.css 之後，靠覆寫生效。
+   放在 assets/shell/ 子資料夾：check.mjs 的「產品 CSS 維持灰階」只掃 assets/*.css，
+   殼層外框的品牌色不屬於線框產品，所以不放在 assets/ 第一層。
+   ============================================================ */
+
+:root {
+  /* Untitled UI 灰階（neutral） */
+  --gray-25: #fcfcfd;
+  --gray-50: #f9fafb;
+  --gray-100: #f2f4f7;
+  --gray-200: #eaecf0;
+  --gray-300: #d0d5dd;
+  --gray-400: #98a2b3;
+  --gray-500: #667085;
+  --gray-600: #475467;
+  --gray-700: #344054;
+  --gray-800: #1d2939;
+  --gray-900: #101828;
+
+  /* 品牌色階：由 --brand 自動算（600＝主色本身；較淺的混白、較深的混黑） */
+  --brand: #475467;
+  --brand-25: color-mix(in srgb, var(--brand) 3%, #fff);
+  --brand-50: color-mix(in srgb, var(--brand) 6%, #fff);
+  --brand-100: color-mix(in srgb, var(--brand) 13%, #fff);
+  --brand-200: color-mix(in srgb, var(--brand) 27%, #fff);
+  --brand-300: color-mix(in srgb, var(--brand) 47%, #fff);
+  --brand-400: color-mix(in srgb, var(--brand) 68%, #fff);
+  --brand-500: color-mix(in srgb, var(--brand) 85%, #fff);
+  --brand-600: var(--brand);
+  --brand-700: color-mix(in srgb, var(--brand) 85%, #000);
+  --brand-800: color-mix(in srgb, var(--brand) 70%, #000);
+  --brand-900: color-mix(in srgb, var(--brand) 55%, #000);
+  --ring-brand: 0 0 0 4px color-mix(in srgb, var(--brand) 12%, transparent);
+
+  /* 把 shell.css 的灰階變數接到 Untitled 灰階 */
+  --c-25: var(--gray-25);
+  --c-50: var(--gray-50);
+  --c-100: var(--gray-100);
+  --c-200: var(--gray-200);
+  --c-300: var(--gray-300);
+  --c-400: var(--gray-400);
+  --c-500: var(--gray-500);
+  --c-600: var(--gray-600);
+  --c-700: var(--gray-700);
+  --c-800: var(--gray-800);
+  --c-900: var(--gray-900);
+  --bg: var(--gray-50);
+  --ink: var(--gray-900);
+  --ink-soft: var(--gray-600);
+  --line: var(--gray-200);
+
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --panel-width: 380px;
+  --sidemenu-width: 288px;
+}
+
+body {
+  font-family: Inter, "Noto Sans TC", -apple-system, "PingFang TC", "Microsoft JhengHei", "Segoe UI", sans-serif;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* ---------- 上方列 ---------- */
+.topbar {
+  box-shadow: 0 1px 0 rgba(16, 24, 40, 0.02);
+}
+.topbar__project {
+  font-size: 15px;
+  color: var(--gray-900);
+}
+.topbar__mark {
+  border-radius: 9px;
+  background: linear-gradient(180deg, var(--brand-500) 0%, var(--brand-700) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 2px color-mix(in srgb, var(--brand-700) 35%, transparent);
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: 16px;
+}
+.topbar__select {
+  margin-left: 4px;
+  border-color: var(--gray-300);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  color: var(--gray-700);
+  font-weight: 500;
+}
+.topbar__select:focus-visible,
+.toggle:focus-visible,
+.menu__item:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+.width-label {
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+.role-switch {
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+/* 次要按鈕（頁面／工程標註開關） */
+.toggle {
+  font-size: 13px;
+  border-color: var(--gray-300);
+  color: var(--gray-700);
+  box-shadow: var(--shadow-xs);
+}
+.toggle:hover {
+  background: var(--gray-50);
+}
+.toggle[aria-expanded="true"] {
+  background: var(--brand-50);
+  border-color: var(--brand-200);
+  color: var(--brand-700);
+}
+
+/* 模式切換：Untitled UI button group（分段控制） */
+.mode-switch {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  background: var(--gray-50);
+}
+.mode-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--gray-500);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+.mode-switch__btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mode-switch__btn:hover {
+  color: var(--gray-700);
+}
+.mode-switch__btn.is-active {
+  background: #fff;
+  color: var(--gray-900);
+  box-shadow: var(--shadow-sm);
+}
+.mode-switch__btn.is-active svg {
+  color: var(--brand-600);
+}
+.mode-switch__btn:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+
+/* ---------- 左側頁面選單 ---------- */
+.menu {
+  padding: 12px 12px 24px;
+}
+.menu details > summary {
+  border-radius: var(--radius-md);
+}
+.menu details > summary:hover {
+  background: var(--gray-50);
+}
+.menu__area > summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.menu__flow {
+  padding-left: 6px;
+}
+.menu__flow > summary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+}
+.menu__item {
+  min-height: 34px;
+  padding: 6px 8px 6px 26px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+.menu__item[hidden] {
+  display: none;
+}
+/* 狀態頁碼（已拆區塊的頁）縮排列在主頁碼底下 */
+.menu__item--state {
+  min-height: 30px;
+  padding-left: 44px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--gray-600);
+}
+.menu__item--state .menu__code {
+  min-width: 52px;
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  font-size: 10.5px;
+}
+.menu__item--state.is-active .menu__code {
+  border-color: var(--brand-200);
+}
+.menu__item:hover {
+  background: var(--gray-50);
+}
+.menu__item--pin {
+  padding-left: 8px;
+  color: var(--gray-800);
+}
+.menu__code {
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+}
+.menu__item:hover .menu__code {
+  background: var(--gray-200);
+}
+.menu__item.is-active {
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-weight: 600;
+  box-shadow: none;
+}
+.menu__item.is-active .menu__code {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+.menu__item.is-unplanned .menu__code {
+  background: var(--gray-50);
+}
+.menu__tag {
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-600);
+  font-weight: 500;
+}
+.menu__divider {
+  margin: 8px 4px 10px;
+}
+
+/* ---------- 中間畫布：淡點陣底 ---------- */
+.stage {
+  background-color: var(--gray-50);
+  background-image: radial-gradient(circle, var(--gray-200) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+.stage--web.is-sim-width {
+  background-color: var(--gray-100);
+}
+.is-mode-notes .stage {
+  background-color: var(--brand-25);
+}
+
+/* ---------- 右側面板 ---------- */
+.panel {
+  padding: 20px 20px 32px;
+  font-size: 14px;
+}
+.panel__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.panel__code {
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  vertical-align: 2px;
+}
+.panel__block {
+  border-top-color: var(--gray-100);
+}
+.panel__block-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--gray-500);
+}
+.panel__bullets {
+  color: var(--gray-700);
+}
+.panel__bullets a,
+.panel__card a {
+  color: var(--brand-700);
+  text-decoration-color: color-mix(in srgb, var(--brand-700) 35%, transparent);
+}
+.panel__textlink {
+  color: var(--brand-700);
+  text-decoration: none;
+}
+.panel__textlink:hover {
+  text-decoration: underline;
+}
+.panel__chip {
+  border-color: var(--gray-300);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  color: var(--gray-700);
+  font-size: 13px;
+  font-weight: 500;
+}
+.panel__chip:hover {
+  border-color: var(--brand-300);
+  color: var(--brand-700);
+  background: #fff;
+}
+.panel__card {
+  border-color: var(--gray-200);
+  border-radius: var(--radius-xl);
+  background: var(--gray-50);
+}
+.panel__card-title {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.panel__label {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.panel__sub {
+  color: var(--gray-500);
+  font-weight: 600;
+}
+
+/* 四區標題改成 badge（顏色區分類別）：前端驗證｜前端互動｜顯示規則｜API */
+.panel__block-title[data-section] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+.panel__block-title[data-section]::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.panel__block-title[data-section="前端驗證"] { border-color: #b2ddff; background: #eff8ff; color: #175cd3; }
+.panel__block-title[data-section="前端互動"] { border-color: #d9d6fe; background: #f4f3ff; color: #5925dc; }
+.panel__block-title[data-section="顯示規則"] { border-color: #fedf89; background: #fffaeb; color: #b54708; }
+.panel__block-title[data-section="API"] { border-color: #abefc6; background: #ecfdf3; color: #067647; }
+
+/* ---------- 資訊備註模式（assets/notes-mode.js） ---------- */
+.notes-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+.notes-head__code {
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 22px;
+}
+.notes-head__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--gray-900);
+}
+.notes-tip {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--gray-500);
+}
+.notes-tip--warn {
+  padding: 10px 12px;
+  border: 1px solid #fedf89;
+  border-radius: var(--radius-lg);
+  background: #fffcf5;
+  color: #b54708;
+}
+.notes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.notes-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  color: var(--gray-700);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+}
+.notes-chip:hover {
+  border-color: var(--brand-300);
+  color: var(--brand-700);
+  box-shadow: var(--ring-brand);
+}
+.notes-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gray-600);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notes-back:hover {
+  color: var(--gray-900);
+}
+.notes-region {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-xl);
+  background: var(--brand-50);
+  border: 1px solid var(--brand-200);
+}
+.notes-region__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand-800);
+}
+.notes-region__count {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--brand-200);
+  color: var(--brand-700);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.notes-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.notes-fields__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+}
+.notes-state {
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+}
+.notes-state.is-on-screen {
+  border-color: var(--brand-300);
+  box-shadow: var(--ring-brand);
+}
+.notes-state__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.notes-state__title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.notes-state__index {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+.is-on-screen .notes-state__index {
+  background: var(--brand-600);
+  color: #fff;
+}
+.notes-state__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--gray-900);
+}
+.notes-state__code {
+  margin: 4px 0 0 28px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.notes-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-200);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.notes-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-600);
+}
+/* 狀態卡頭（序號＋名稱＋頁碼）整塊可點＝切左側畫面；已在畫面中的不再可點 */
+.notes-state__summary {
+  margin: -14px;
+  padding: 14px;
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  outline: none;
+}
+.notes-state__summary:hover {
+  background: var(--gray-50);
+}
+.notes-state.is-on-screen .notes-state__summary {
+  cursor: default;
+}
+.notes-state.is-on-screen .notes-state__summary:hover {
+  background: transparent;
+}
+.notes-state__summary:focus-visible {
+  box-shadow: var(--ring-brand);
+}
+.notes-state.is-expanded .notes-state__summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.notes-state__side {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 箭頭：只展開／收合備註，展開時轉向下 */
+.notes-chevron {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+.notes-chevron:hover {
+  border-color: var(--gray-300);
+  background: #fff;
+  color: var(--gray-900);
+}
+.notes-chevron svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
+.notes-state.is-expanded .notes-chevron svg {
+  transform: rotate(90deg);
+}
+/* 全部展開／全部收合 */
+.notes-state-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: -4px 0 8px;
+}
+.notes-state-tools__btn {
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--gray-600);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notes-state-tools__btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+.notes-state__body {
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--gray-100);
+}
+/* 狀態卡、整頁通則內的四區攤平，不再一層一層包框 */
+.notes-state__body .panel__block,
+.notes-block .panel__block {
+  padding: 0 0 12px;
+  border-top: 0;
+}
+.notes-block {
+  border-top-color: var(--gray-100);
+}
+.notes-sub {
+  margin: 8px 0 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--gray-200);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+}
+.notes-state__body > .notes-sub:first-child,
+.notes-block div > .notes-sub:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.notes-state__body .panel__card {
+  background: var(--gray-50);
+}
+
+/* 資訊備註模式：右側面板一律展開，不顯示「工程標註」開關 */
+.is-mode-notes #panel-toggle {
+  display: none !important;
+}
