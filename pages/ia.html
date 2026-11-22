@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G4 資訊架構</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <main class="doc doc--wide">
+      <h1 class="doc__title">資訊架構</h1>
+      <p class="doc__lead">產品 → 功能模組 → 頁面，每頁附方框結構（只排區塊，不定細節）。標「key page」的頁先畫大版面，給客戶看整體感覺。</p>
+      <div id="doc-root"></div>
+    </main>
+
+    <script src="../wireframe.config.js"></script>
+    <script src="../assets/page-map.js"></script>
+    <script src="../assets/doc-pages.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script src="../assets/doc-render.js"></script>
+    <script>
+      WfDocRender.render("ia", document.getElementById("doc-root"), "G4");
+    </script>
+  </body>
+</html>

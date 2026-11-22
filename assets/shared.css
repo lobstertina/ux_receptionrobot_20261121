@@ -1,0 +1,3040 @@
+/* ============================================================
+   線框元件（每張 pages/*.html 都引用）
+   - 規則來源：../../shared/線框視覺基本盤.md（字級、間距、分隔線、尺寸都以那份為準）
+   - 一律只用黑白灰：十六進位三組相同（#333333、#cccccc…）。
+     例外只有兩種，都用紅色 --wf-color-error：（1）錯誤狀態（2）危險動作按鈕（登出確認、刪除、移除等不可逆動作）。
+     只能寫在 selector 含 error／invalid／danger 的規則裡
+     （例 .field.is-error、.field__error、.notice--error、.btn--danger、.alert__btn--danger）；check.mjs 會擋其他地方。
+   - 數值一律用第 0 段的變數（token），元件裡不再寫死字級、間距、圓角。
+   - 分五段：0 變數　1 基礎　2 版面骨架（App／Web）　3 元件（3b–3e 會動的元件與 Web 後台元件）　4 文件頁
+   - class 命名：小寫 kebab-case，BEM 寫法（區塊__元素--變體）。
+   - 允許的小字（12px）只有 --fs-caption 一種，且宣告那行要加
+     「wf-allow-small」註解說明用途；check.mjs 才不會提醒。
+   ============================================================ */
+
+/* ================= 0 變數（token） ================= */
+:root {
+  /* 灰階：0 白 → 900 近黑。主要動作色＝--g-800 */
+  --g-0: #ffffff;
+  --g-25: #fafafa;
+  --g-50: #f7f7f7;
+  --g-100: #f2f2f2;
+  --g-150: #eeeeee;
+  --g-200: #e5e5e5;
+  --g-300: #d1d1d1;
+  --g-400: #aeaeae;
+  --g-500: #767676;   /* 輔助文字：對白底 4.54:1（必讀的字至少 4.5:1） */
+  --g-600: #666666;
+  --g-700: #454545;
+  --g-800: #2c2c2c;
+  --g-900: #111111;
+
+  /* 線：
+     --line        分隔線（淺灰）
+     --line-strong 元件邊界：輸入框、下拉、多行輸入、合併輸入框、選取卡、勾選框／圓鈕、驗證碼格的外框；對白底 ≥3:1
+     --line-soft   有文字可辨認的外框：次要／危險按鈕、可點選 pill、標籤、日期格 */
+  --line: var(--g-200);
+  --line-strong: #949494;
+  --line-soft: var(--g-300);
+
+  /* 錯誤色：線框唯一允許的彩色，只給兩種地方——
+     （1）錯誤狀態：欄位錯誤框線、錯誤訊息文字、表單層級錯誤句
+     （2）危險動作按鈕的字：登出確認、刪除、移除等不可逆動作（.btn--danger、.alert__btn--danger）
+     不可用在一般按鈕、標籤、強調、裝飾；selector 不含 error／invalid／danger 的規則用到它，check.mjs 會擋 */
+  --wf-color-error: #d32f2f;
+
+  /* 字級（App 預設；Web 在第 2 段用 media query 放大標題）
+     可讀文字一律 ≥14px；12px 只給極少數註記（版本號、圖說），不給標籤、按鈕、內文 */
+  --fs-display: 26px;  /* 頁面主標（登入頁「開始使用」、結果頁大標） */
+  --fs-title: 22px;    /* 系統訊息標題（空狀態、成功、錯誤頁的大字） */
+  --fs-nav: 16px;      /* App 導覽列標題 */
+  --fs-section: 16px;  /* 區塊標題（「選日期」「各項觀察」） */
+  --fs-btn: 16px;      /* 主要按鈕 */
+  --fs-body: 15px;     /* 內文、輸入值、清單主標 */
+  --fs-sub: 14px;      /* 輔助說明、欄位標籤、標籤 pill、小按鈕、錯誤訊息 */
+  --fs-caption: 12px;  /* wf-allow-small：只給註記（免責聲明、狀態詞、版本號、圖說），不可用於標籤、按鈕或要操作的字 */
+
+  --lh-tight: 1.3;     /* 標題 */
+  --lh-body: 1.6;      /* 內文 */
+
+  /* 間距（App）：一律 4 的倍數。頁面左右 20、區塊之間 28、欄位之間 16、區塊內 12、元素之間 8、標題與副標 4 */
+  --page-x: 20px;      /* 頁面左右邊距（內容、置底按鈕、導覽列都對齊這條線） */
+  --gap-block: 28px;   /* 內容區兩個區塊之間（用留白分區，不用線） */
+  --gap-field: 16px;   /* 表單欄位之間 */
+  --gap-group: 12px;   /* 同一區塊內：標題到內容、卡片與卡片 */
+  --gap-item: 8px;     /* 同一組元素之間：標籤到輸入框、pill 與 pill、格子與格子 */
+  --gap-tight: 4px;    /* 緊貼：標題與副標、欄位名與值 */
+  --gap-foot: 12px;    /* 置底區元素之間 */
+  --pad-card: 16px;    /* 卡片內距 */
+  --pad-control: 16px; /* 輸入欄、下拉、多行輸入、提示框的左右內距 */
+
+  /* 尺寸 */
+  --h-btn: 52px;       /* 主要按鈕 */
+  --h-btn-sm: 40px;    /* 小按鈕（列內動作「換門市」） */
+  --h-input: 50px;     /* 輸入欄 */
+  --h-chip: 38px;      /* 可點選的 pill（篩選、單選膠囊） */
+  --h-row: 48px;       /* 清單列最小高度（只有一行字時） */
+  --h-touch: 44px;     /* 任何可點元素的最小點擊範圍 */
+  --h-choice: 56px;    /* 選取卡最小高度（一行字；含說明文字時依內容長高） */
+  --h-nav: 48px;       /* App 導覽列 */
+
+  /* 圓角 */
+  --radius: 10px;      /* 按鈕、輸入欄、提示框 */
+  --radius-card: 12px; /* 卡片、群組清單 */
+  --radius-pill: 999px;
+  --radius-btn: 12px;   /* 按鈕（App 主按鈕高 52、圓角 12；Web 按鈕高 44 同圓角） */
+  --radius-sheet: 16px; /* 底部面板上緣、浮動選單 */
+
+  /* 圖層（數字越大越上層）：系統層（狀態列、Home 條、鍵盤）＞ 對話框 ＞ 遮罩 ＞ 底部面板／側邊抽屜 ＞ 浮動選單 ＞ 內容
+     遮罩是對話框、底部面板、側邊抽屜各自的底層，所以對話框疊在面板上時，遮罩會蓋住面板、不蓋系統層 */
+  --z-popmenu: 30;      /* 浮動更多選單（不壓遮罩，只靠陰影浮起） */
+  --z-sheet: 50;        /* 底部面板與它的遮罩 */
+  --z-drawer: 50;       /* 側邊抽屜與它的遮罩 */
+  --z-alert: 70;        /* 對話框與它的遮罩 */
+  --z-toast: 80;        /* 輕提示 */
+  --z-system: 90;       /* 狀態列、Home 條、模擬鍵盤 */
+  --z-tooltip: 60;      /* 提示泡泡（Web）：浮在內容與選單之上、對話框之下 */
+  --z-sticky: 20;       /* Web 後台固定頂列 */
+  --z-bulk: 25;         /* 批次操作列（浮在內容與固定頂列之上、浮動選單與抽屜之下） */
+  --scrim: rgba(0, 0, 0, 0.4);                 /* 遮罩底色 */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.16); /* 浮層陰影（浮動選單、底部面板） */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.06);        /* 可點擊卡片的陰影（純展示卡片不加） */
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(0, 0, 0, 0.08); /* 可點擊卡片滑過時加深 */
+  --dur-overlay: 240ms;                        /* 浮層開合時間 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --kb-h: 0px;          /* 模擬鍵盤高度：proto-keyboard.js 開鍵盤時寫入 */
+
+  /* 無框淡底版（filled）：同頁有框的表單元件太多時，整個 .form 改用淡灰底、不畫框 */
+  --fill-control: var(--g-100);          /* 輸入框、下拉、多行、選取卡的底色 */
+  --fill-control-disabled: var(--g-50);  /* 停用時的底色（字同時轉淺灰） */
+
+  --gap: 16px;         /* 舊名保留：.grid／.stack 預設間距 */
+}
+
+/* ================= 1 基礎 ================= */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+/* 表單元素在 flex 裡的收縮下限：不寫的話 input 會撐破容器 */
+input, select, textarea { min-width: 0; }
+body {
+  font-family: ui-sans-serif, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Segoe UI", sans-serif;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--g-900);
+  background: var(--g-0);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, p { margin: 0; }
+h1 { font-size: var(--fs-display); line-height: var(--lh-tight); font-weight: 700; letter-spacing: -0.2px; }
+h2 { font-size: var(--fs-section); line-height: var(--lh-tight); font-weight: 600; }
+h3 { font-size: var(--fs-body); line-height: var(--lh-tight); font-weight: 600; }
+ul, ol { margin: 0; padding: 0; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+[hidden] { display: none !important; }
+.text-muted { color: var(--g-500); }
+.text-small { font-size: var(--fs-sub); }
+.text-caption { font-size: var(--fs-caption); color: var(--g-500); } /* wf-allow-small：只給註記（版本號、圖說）；頁面裡每一處用法 check.mjs 都會提醒 */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+/* 鍵盤焦點外框：所有可聚焦元素一律保留，元件不可把它拿掉（輸入框類改用自己的深色框＋光暈，效果相同） */
+:where(a, button, summary, [tabindex], select):focus-visible { outline: 2px solid var(--g-800); outline-offset: 2px; }
+
+/* ================= 2 版面骨架 ================= */
+
+/* ---- App 畫面骨架（375×812）：狀態列 56／導覽列 48／可捲動內容／置底操作區／Home 條 34 ----
+   <div class="scr">
+     <div class="statusbar"></div>             ← proto.js 自動補時間與圖示
+     <header class="appbar">…</header>         ← 導覽列（可省略）；預設「沒有」底線
+     <main class="scr__body">…</main>          ← 唯一可捲動區；區塊之間 28px 留白
+     <footer class="scr__foot">…</footer>      ← 置底按鈕（可省略）；預設「沒有」上邊線
+     <div class="homebar"></div>
+   </div> */
+.scr {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--g-0);
+}
+.statusbar {
+  flex: none;
+  z-index: var(--z-system); /* 系統層：遮罩之上、不填底色 */
+  height: 56px;
+  padding: 0 28px 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.statusbar__island {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 124px;
+  height: 36px;
+  margin-left: -62px;
+  border-radius: 20px;
+  background: var(--g-900);
+}
+.statusbar__icons { display: inline-flex; gap: 4px; }
+.statusbar__icons i { display: block; width: 16px; height: 11px; border-radius: 3px; background: var(--g-900); }
+.statusbar__icons i:last-child { width: 24px; }
+/* 內容區：區塊之間用 28px 留白分開；子元素直接排（不必再包 .stack） */
+.scr__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px var(--page-x) 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-block);
+}
+/* 置底區：主按鈕寫在第一個，畫面上永遠在最底；附屬文字往上疊（column-reverse）。
+   表單層級錯誤句（.notice--error）也寫在主按鈕之後，畫面上就在按鈕正上方、間距 12：
+   <footer class="scr__foot scr__foot--line">
+     <button type="button" class="btn btn--primary btn--block">確認</button>
+     <p class="notice notice--error" role="alert">有 2 個欄位需要修改</p>
+   </footer>
+   預設不加上邊線；內容會捲到按鈕後面、需要標出界線時才加 .scr__foot--line */
+.scr__foot {
+  flex: none;
+  padding: 12px var(--page-x) 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--gap-foot);
+  background: var(--g-0);
+  position: relative; /* 輕提示 .toast 放在這裡面時，以置底區上緣定位 */
+}
+.scr__foot--line { border-top: 1px solid var(--line); }
+/* 置底區並排變體：主按鈕仍寫第一個，畫面上在右；條款句、錯誤摘要寫在按鈕之後，自成一行疊在按鈕列上方
+   .scr__foot--split  左資訊區＋右主鈕（價格、起價、數量、狀態要和主鈕一起看時）；主鈕佔 55% 寬
+     <footer class="scr__foot scr__foot--split">
+       <button type="button" class="btn btn--primary">立即預訂</button>
+       <div class="scr__foot-info"><strong class="scr__foot-price">NT$ 2,400</strong><span class="scr__foot-sub">每晚起・剩 2 間</span></div>
+     </footer>
+   .scr__foot--row    兩顆短按鈕並排、等寬，主鈕在右（每顆 6 字以內、只有 2 顆；超過改回直排）
+     <footer class="scr__foot scr__foot--row">
+       <button type="button" class="btn btn--primary">查看票券</button>
+       <button type="button" class="btn btn--secondary">即時資訊</button>
+     </footer> */
+.scr__foot--split, .scr__foot--row { flex-direction: row-reverse; flex-wrap: wrap-reverse; align-items: center; }
+.scr__foot--split > .btn { flex: 0 0 55%; min-width: 0; }
+.scr__foot--row > .btn { flex: 1 1 0; min-width: 0; }
+.scr__foot--split > :not(.btn):not(.scr__foot-info):not(.toast), .scr__foot--row > :not(.btn):not(.toast) { flex-basis: 100%; }
+.scr__foot-info { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--gap-tight); }
+.scr__foot-price { font-size: 18px; font-weight: 700; line-height: var(--lh-tight); color: var(--g-900); font-variant-numeric: tabular-nums; }
+.scr__foot-sub { font-size: var(--fs-sub); line-height: var(--lh-tight); color: var(--g-500); }
+/* 長詳情頁（5 段以上）段與段之間的粗灰帶：滿版、高 8、淺灰底，上下各留 16（取代那一處的 28 留白）
+   <div class="scr__band" role="presentation"></div> */
+.scr__band { flex: none; height: 8px; margin: -12px calc(-1 * var(--page-x)); background: var(--g-100); }
+.homebar { flex: none; position: relative; z-index: var(--z-system); height: 34px; display: flex; align-items: center; justify-content: center; }
+.homebar::after { content: ""; width: 134px; height: 5px; border-radius: 3px; background: var(--g-900); }
+
+/* App 導覽列：左返回／中標題／右動作。預設沒有底線——
+   下面接的第一個區塊也不要再加上邊線（兩條線疊在一起是最常見的反例）。
+   長頁捲動時需要標出固定頂欄邊界，才加 .appbar--line */
+.appbar {
+  flex: none;
+  height: var(--h-nav);
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  padding: 0 calc(var(--page-x) - 12px);
+  background: var(--g-0);
+}
+.appbar--line { border-bottom: 1px solid var(--line); }
+.appbar__title {
+  text-align: center;
+  font-size: var(--fs-nav);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-btn {
+  width: var(--h-touch);
+  height: var(--h-touch);
+  border: none;
+  border-radius: 22px;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-900);
+  cursor: pointer;
+}
+.icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- Web 畫面骨架：頁首／主要內容／頁尾（與 starters/web-page.html 相同） ----
+   <div class="site">
+     <header class="site-header"><nav class="container topnav">…</nav></header>
+     <main class="site-main"><section class="section"><div class="container">…</div></section></main>
+     <footer class="site-footer"><div class="container">…</div></footer>
+   </div>
+   斷點（與殼層寬度標示一致）：手機 ≤640、平板 641–1099、桌機 ≥1100
+     - 字級只分兩段：≤640 用手機字級，641 起用桌機字級
+     - 1100 是導覽列的分界：<1100 主選單收進漢堡鈕；卡片欄數也在這裡換
+   數值見 ../../shared/線框視覺基本盤.md 第 1.3、2.2 節 */
+.site {
+  --web-x: 20px;          /* 版心左右邊距：手機 20、641 起 24 */
+  --web-max: 1200px;      /* 版心內容最大寬 */
+  --web-section: 48px;    /* 區段上下內距：手機 48、641 起 72 */
+  --web-head-gap: 16px;   /* 區段標題到內容：手機 16、641 起 28 */
+  --web-card-gap: 12px;   /* 卡片與卡片：手機 12、641 起 16 */
+  --web-pad-card: 16px;   /* 卡片內距：手機 16、641 起 20 */
+  --web-nav-h: 64px;      /* 頁首高：手機 64、641 起 80 */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  line-height: 1.625;     /* 內文 16／26 */
+}
+@media (min-width: 641px) {
+  .site { --web-x: 24px; --web-section: 72px; --web-head-gap: 28px; --web-card-gap: 16px; --web-pad-card: 20px; --web-nav-h: 80px; }
+}
+/* 字級：手機 h1 28／h2 24／h3 18；641 起 h1 36／h2 28／h3 20（行高都是固定 px，標題不擠）。
+   h2 比 h1 低一級：區段標題不再跟頁面主標一樣大，一屏裡的主標才找得到 */
+.site h1 { font-size: 28px; line-height: 40px; font-weight: 700; letter-spacing: 0; }
+.site h2 { font-size: 24px; line-height: 36px; font-weight: 700; }
+.site h3 { font-size: 18px; line-height: 28px; font-weight: 700; }
+.site .hero__title { font-size: 34px; line-height: 48px; font-weight: 700; } /* 首頁／活動頁主視覺大標，一頁最多一個 */
+@media (min-width: 641px) {
+  .site h1 { font-size: 36px; line-height: 48px; }
+  .site h2 { font-size: 28px; line-height: 40px; }
+  .site h3 { font-size: 20px; line-height: 30px; }
+  .site .hero__title { font-size: 56px; line-height: 76px; }
+}
+.site .text-small, .site .text-muted.text-small { line-height: 24px; } /* 輔助 14／24 */
+.site-main { flex: 1; }
+/* 版心：內容最大 1200，左右邊距 20（手機）／24 */
+.container { width: 100%; max-width: calc(var(--web-max, 1200px) + 2 * var(--web-x, 20px)); margin: 0 auto; padding: 0 var(--web-x, var(--page-x)); }
+/* 區段：上下 72（手機 48）；相鄰區段上距歸 0，區段之間只留一次 72，不會疊成 144 */
+.section { padding: var(--web-section, 48px) 0; }
+.section + .section { padding-top: 0; }
+/* 窄版心：文章內文、說明中心、法律條款這類長文，內容最大寬 720 置中；頁首、頁尾、相關文章仍用 .container
+   <div class="container container--narrow">…</div> */
+.container--narrow { max-width: calc(720px + 2 * var(--web-x, 20px)); }
+/* 換底色區段：只給官網首頁的收尾行動呼籲（及最多一個重點區段）；滿版淺灰底，內容仍對齊 .container
+   <section class="section section--band"><div class="container">…</div></section> */
+.section--band { background: var(--g-100); }
+.section + .section--band, .section--band + .section { padding-top: var(--web-section, 48px); }
+/* 區段標題列：標題到內容 28（手機 16）。.block 在 Web 裡也套這個距離 */
+.site .block { gap: var(--web-head-gap); }
+
+/* Web 導覽列：頁首底線滿版（貼齊視窗左右），內容對齊 .container；高 80（手機 64）；<1100 主選單收進漢堡鈕 */
+.site-header { border-bottom: 1px solid var(--line); background: var(--g-0); }
+.topnav { height: var(--web-nav-h, 64px); display: flex; align-items: center; gap: 24px; }
+.topnav__logo { width: 96px; height: 28px; border-radius: 4px; background: var(--g-300); flex: none; }
+.topnav__links { display: flex; align-self: stretch; gap: 8px; list-style: none; flex: 1; justify-content: center; }
+.topnav__links a { display: flex; align-items: center; height: 100%; padding: 0 12px; border-bottom: 3px solid transparent; text-decoration: none; color: var(--g-700); font-size: 16px; }
+.topnav__links a[aria-current="page"] { color: var(--g-900); font-weight: 700; border-bottom-color: var(--g-900); }
+.topnav__actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.topnav__menu { display: none; }
+@media (max-width: 1099px) {
+  .topnav .topnav__links { display: none; }
+  .topnav .topnav__menu { display: inline-flex; margin-left: auto; }
+}
+@media (max-width: 640px) {
+  .topnav .topnav__actions { display: none; }
+}
+/* 頁尾：上 48、下 28；桌機左右兩欄（品牌與聯絡資訊｜連結群組），手機單欄；底部版權列上方一條線。
+   <footer class="site-footer"><div class="container">
+     <div class="site-footer__top"><div class="site-footer__brand">…</div><div class="site-footer__links"><ul>…</ul>…</div></div>
+     <div class="site-footer__bottom">© …</div>
+   </div></footer> */
+.site-footer { border-top: 1px solid var(--line); background: var(--g-50); padding: 48px 0 28px; font-size: var(--fs-sub); line-height: 24px; color: var(--g-600); }
+.site-footer__top { display: grid; gap: 32px; grid-template-columns: 1fr; }
+.site-footer__brand { display: flex; flex-direction: column; gap: var(--gap-group); }
+.site-footer__links { display: grid; gap: 24px 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.site-footer__links ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.site-footer__links b { color: var(--g-900); font-weight: 600; }
+.site-footer__bottom { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); }
+.site-footer__bottom:first-child { margin-top: 0; padding-top: 0; border-top: none; } /* 頁尾只有版權列時不加線 */
+@media (min-width: 1100px) {
+  .site-footer__top { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; }
+  .site-footer__links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* 手機置底操作列（Web 詳情頁的主要動作）：≤640 固定在視窗底部，頁面底部預留空間不被擋住；641 起回到內容裡 */
+.action-bar { display: flex; gap: var(--gap-item); }
+@media (max-width: 640px) {
+  .action-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px var(--web-x, 20px); background: var(--g-0); border-top: 1px solid var(--line); }
+  .action-bar .btn { flex: 1; height: var(--h-btn); }
+  .site:has(.action-bar) { padding-bottom: 80px; }
+}
+
+/* 格線工具 */
+.grid { display: grid; gap: var(--gap); }
+.grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Web 卡片網格：桌機 4／3 欄 → <1100 兩欄 → ≤640 一欄；卡片間 16（手機 12）；同一列卡片等高（以最高那張為準） */
+.site .grid { gap: var(--web-card-gap); align-items: stretch; }
+@media (max-width: 1099px) { .site .grid--3, .site .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .site .grid--2, .site .grid--3, .site .grid--4 { grid-template-columns: 1fr; } }
+.stack { display: flex; flex-direction: column; gap: var(--gap-group); }
+.row { display: flex; align-items: center; gap: var(--gap-group); }
+
+/* ================= 3 元件 ================= */
+
+/* ---- 頁首標題組（大標＋說明）：登入、結果頁開頭 ---- */
+.page-head { display: flex; flex-direction: column; gap: var(--gap-item); } /* 大標與說明 8 */
+.page-head__title { font-size: var(--fs-display); font-weight: 700; line-height: 1.28; }
+.page-head__sub { font-size: var(--fs-sub); color: var(--g-500); line-height: var(--lh-body); }
+
+/* ---- 區塊標題列（左標題、右輔助資訊或文字鈕）：不加底線，靠字級與留白分區 ---- */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--gap-item); }
+.section-head__title { font-size: var(--fs-section); font-weight: 600; line-height: var(--lh-tight); }
+.section-head__meta { font-size: var(--fs-sub); color: var(--g-500); }
+/* 標題與它的內容放同一個 .block，間距 12；區塊與區塊之間由 .scr__body 給 28 */
+.block { display: flex; flex-direction: column; gap: var(--gap-group); }
+
+/* ---- 按鈕 ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--h-btn);
+  padding: 0 20px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--g-800);
+  background: var(--g-0);
+  color: var(--g-900);
+  font: inherit;
+  font-size: var(--fs-btn);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn--primary { background: var(--g-800); border-color: var(--g-800); color: var(--g-0); }
+.btn--secondary { background: var(--g-0); border-color: var(--line-soft); color: var(--g-700); font-weight: 600; }
+.btn--ghost { border-color: transparent; background: none; color: var(--g-600); font-size: var(--fs-sub); font-weight: 600; text-decoration: underline; }
+.btn--sm { height: var(--h-btn-sm); padding: 0 16px; font-size: var(--fs-sub); font-weight: 600; }
+.btn--block { display: flex; width: 100%; }
+/* 危險動作按鈕（刪除、移除等不可逆動作）：白底淺灰框＋紅字；不做紅色實心——實心只留給主要動作 */
+.btn--danger { background: var(--g-0); border-color: var(--line-soft); color: var(--wf-color-error); font-weight: 600; }
+/* Web 按鈕與輸入欄：高 44（列內小按鈕 32）、字 15；手機置底操作列仍用 52（見 .action-bar） */
+.site .btn { height: 44px; font-size: 15px; }
+.site .btn--sm { height: 32px; padding: 0 12px; font-size: var(--fs-sub); } /* 只給 641 以上的表格列內、頁首 */
+@media (max-width: 640px) { .site .btn--sm { height: var(--h-touch); } }
+.site .input, .site .select, .site .input-group { height: 44px; }
+.btn.is-disabled, .btn:disabled { background: var(--g-200); border-color: var(--g-200); color: var(--g-400); cursor: not-allowed; }
+.btn--ghost.is-disabled, .btn--ghost:disabled { background: none; border-color: transparent; }
+.btn.is-loading { background: var(--g-600); border-color: var(--g-600); color: var(--g-0); cursor: progress; }
+
+/* 文字鈕（句子裡或置底區的次要動作，例：「重新發送」「略過」） */
+.text-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  min-height: var(--h-touch);
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  color: var(--g-600);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---- 輸入欄 ---- */
+.form { display: flex; flex-direction: column; gap: var(--gap-field); } /* 多個欄位之間 18 */
+.field { display: flex; flex-direction: column; gap: var(--gap-item); }
+.field__label { font-size: var(--fs-sub); font-weight: 600; color: var(--g-700); }
+.field__control { display: flex; gap: var(--gap-item); }
+.input, .select {
+  width: 100%;
+  height: var(--h-input);
+  padding: 0 var(--pad-control);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  color: var(--g-900);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.select { width: auto; flex: none; }
+.input::placeholder { color: var(--g-400); font-weight: 400; }
+.input:focus, .select:focus { outline: none; border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.field.is-error .input, .field.is-error .input-group { border: 1.5px solid var(--wf-color-error); background: var(--g-0); }
+.field__error { font-size: var(--fs-sub); font-weight: 500; line-height: 1.5; color: var(--wf-color-error); } /* 紅字一句，不加圖示 */
+.field__help { font-size: var(--fs-sub); color: var(--g-500); line-height: 1.5; }
+/* 唯讀顯示：這個人不能改的欄位（建立者、建立時間、沒有修改權限）→ 不畫輸入框，只顯示「標籤＋值」文字
+   <div class="field field--readonly"><span class="field__label">建立者</span><p class="field__value">王小明</p></div>
+   值與相鄰輸入框同高（50）、垂直置中，雙欄表單裡左右對齊；值留空自動顯示「—」（讀屏念「未提供」）。
+   停用（暫時不能改、條件滿足後就能改）才用 disabled：保留輸入框外形，淡灰底＋淺灰字 */
+.field--readonly .field__label { color: var(--g-500); font-weight: 500; }
+.field__value { display: flex; align-items: center; min-height: var(--h-input); margin: 0; font-size: 16px; line-height: 26px; font-weight: 500; color: var(--g-900); overflow-wrap: anywhere; }
+.field__value:empty::before { content: "—"; content: "—" / "未提供"; color: var(--g-500); font-weight: 400; }
+.input:disabled, .select:disabled, .textarea:disabled { background-color: var(--fill-control-disabled); border-color: var(--g-150); color: var(--g-400); cursor: not-allowed; }
+
+/* 下拉選單單獨成一欄時：滿寬＋自畫箭頭 */
+.select--block {
+  width: 100%;
+  flex: none;
+  padding-right: 40px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--pad-control) center;
+}
+
+/* 多行輸入框：最少 4 行高，可往下拉長 */
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px var(--pad-control);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  color: var(--g-900);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  resize: vertical;
+}
+.textarea::placeholder { color: var(--g-400); }
+.textarea:focus { outline: none; border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.field.is-error .textarea, .field.is-error .select { border: 1.5px solid var(--wf-color-error); background-color: var(--g-0); }
+/* 字數計數放在多行輸入框「裡面」右下角（省一行高度）；只有多行輸入顯示計數
+   <div class="textarea-wrap"><textarea class="textarea"></textarea><span class="field__count">0／200</span></div> */
+.textarea-wrap { position: relative; }
+.textarea-wrap .textarea { padding-bottom: 36px; }
+.field__count { font-size: var(--fs-sub); color: var(--g-500); font-variant-numeric: tabular-nums; }
+.textarea-wrap .field__count { position: absolute; right: var(--pad-control); bottom: 12px; pointer-events: none; }
+
+/* 勾選框與單選（文字型）：整列（框＋文字）都可點，點擊範圍高 44；框 20×20
+   依「權重」選樣式（規則見 ../../shared/線框視覺基本盤.md 第 4.1 節）：
+   - 要使用者做決定的選項（加購、問卷、方案、偏好）→ 用下面的選取卡 .choice-card，不用這個
+   - 通知、備註型的勾選（同意條款、確認風險、記住我）→ 用 .check.check--minor
+   - .choices > .check 清單只留給選項很多、不需說明的篩選面板
+   <label class="check"><input type="checkbox" class="check__box" /><span class="check__label">文字</span></label>
+   單選把 type 改 radio、class 改 radio__box（外層仍用 .check） */
+.choices { display: flex; flex-direction: column; }
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-group);
+  min-height: var(--h-row);
+  padding: 12px 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  color: var(--g-900);
+  cursor: pointer;
+}
+.check__box, .radio__box {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--line-strong);
+  background: var(--g-0);
+  cursor: pointer;
+}
+.check__box { border-radius: 6px; }
+.radio__box { border-radius: 50%; }
+.check__box:checked {
+  border-color: var(--g-800);
+  background: var(--g-800) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 14px 14px no-repeat;
+}
+.radio__box:checked { border: 6px solid var(--g-800); }
+.check__box:focus-visible, .radio__box:focus-visible { outline: 2px solid var(--g-800); outline-offset: 2px; }
+.check__box:disabled, .radio__box:disabled { background-color: var(--g-100); border-color: var(--g-200); cursor: not-allowed; }
+.check__label { flex: 1; min-width: 0; }
+.check__sub { display: block; font-size: var(--fs-sub); color: var(--g-500); }
+.field.is-error .check__box, .field.is-error .radio__box { border-color: var(--wf-color-error); }
+
+/* 低權重的文字型勾選（通知、備註型：同意服務條款、我已確認風險、記住我）：
+   小勾選框＋一行 14px 字，可內嵌條款連結；不做成選取卡（權重太高，會跟真正要做決定的選項搶注意）。
+   通常放在置底區主按鈕上方，或表單最後一列。
+   <label class="check check--minor"><input type="checkbox" class="check__box" />
+     <span class="check__label">我已閱讀並同意<button type="button" class="check__link">服務條款</button></span></label> */
+.check--minor {
+  gap: var(--gap-item);
+  min-height: var(--h-touch);
+  padding: 12px 0;
+  font-size: var(--fs-sub);
+  line-height: 1.5;
+  color: var(--g-700);
+}
+.check--minor .check__box { margin-top: 1px; } /* 框與第一行字的中線對齊 */
+/* 條款連結：句子裡的底線字，點了開條款頁（不會順便打勾） */
+.check__link {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--g-900);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---- 選取卡（要使用者做決定的選項：加購項目、問卷、方案、偏好設定）----
+   整張卡（框＋標題＋說明＋右側金額）都是點擊範圍；左邊的勾選框／圓鈕只用來表示「單選還是複選」。
+   單選用 radio__box、複選用 check__box；同一組卡片只用一種。
+   <div class="choice-cards" role="group" aria-labelledby="addon-title">
+     <label class="choice-card">
+       <input type="checkbox" name="addon" class="check__box" />
+       <span class="choice-card__body">
+         <span class="choice-card__title">指甲修剪</span>
+         <span class="choice-card__sub">含磨甲，約 10 分鐘</span>
+       </span>
+       <span class="choice-card__meta">＋$150</span>
+     </label>
+   </div>
+   選中：框線加深成 2px 深灰＋標題字重 600＋框內打勾（或圓鈕填滿）；不改底色。
+   停用：淡灰底、淺灰字、不可點（例：與已選的「沒有特別需求」互斥）。
+   錯誤：外層 .field.is-error → 每張卡框線轉紅，下方 .field__error 一句紅字。 */
+.choice-cards { display: flex; flex-direction: column; gap: var(--gap-item); }
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  min-height: var(--h-choice);
+  padding: 12px var(--pad-card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  color: var(--g-900);
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  cursor: pointer;
+}
+.choice-card__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.choice-card__title { font-size: var(--fs-body); font-weight: 500; }
+.choice-card__sub { font-size: var(--fs-sub); color: var(--g-500); line-height: 1.5; }
+.choice-card__meta { flex: none; font-size: var(--fs-sub); font-weight: 600; color: var(--g-700); }
+.choice-card:has(input:checked), .choice-card.is-on { border-color: var(--g-800); box-shadow: inset 0 0 0 1px var(--g-800); }
+.choice-card:has(input:checked) .choice-card__title, .choice-card.is-on .choice-card__title { font-weight: 600; }
+.choice-card:has(input:focus-visible) { outline: 2px solid var(--g-800); outline-offset: 2px; }
+.choice-card input:focus-visible { outline: none; } /* 焦點框畫在整張卡外圍，不畫在小框上 */
+.choice-card:has(input:disabled), .choice-card.is-disabled { background: var(--fill-control-disabled); border-color: var(--g-150); color: var(--g-400); cursor: not-allowed; }
+.choice-card:has(input:disabled) .choice-card__sub, .choice-card:has(input:disabled) .choice-card__meta,
+.choice-card.is-disabled .choice-card__sub, .choice-card.is-disabled .choice-card__meta { color: var(--g-400); }
+.field.is-error .choice-card { border-color: var(--wf-color-error); }
+
+/* ---- 無框淡底版（filled）：同一頁有框的表單元件太多（超過 6 個）時用 ----
+   加在 .form 上，整個表單一起換，同一區塊不混用兩種版本：
+   <div class="form form--filled">…</div>
+   預設：淡灰底、不畫框（保留 1px 透明框，切換狀態時不跳動）。
+   聚焦：轉白底＋1.5px 深灰框（與有框版聚焦一樣）。
+   錯誤：轉白底＋1.5px 紅框＋下方一句紅字（與有框版錯誤一樣；紅色仍只出現在錯誤）。
+   選取卡選中：轉白底＋2px 深灰框（框只在選中時出現）。 */
+.form--filled .input, .form--filled .select, .form--filled .textarea, .form--filled .input-group {
+  background-color: var(--fill-control);
+  border-color: transparent;
+}
+.form--filled .input-group .input, .form--filled .input-group .select { background-color: transparent; }
+.form--filled .input-group .select { border-right-color: var(--line-soft); } /* 淡底版裡國碼與號碼之間的細線 */
+.form--filled .input::placeholder, .form--filled .textarea::placeholder { color: var(--g-500); } /* 灰底上淺灰提示字太淡，加深一階 */
+.form--filled .input:focus, .form--filled .select:focus, .form--filled .textarea:focus, .form--filled .input-group:focus-within {
+  background-color: var(--g-0);
+  border-color: var(--g-800);
+}
+.form--filled .input-group .input:focus, .form--filled .input-group .select:focus { background-color: transparent; }
+.form--filled .field.is-error .input, .form--filled .field.is-error .select, .form--filled .field.is-error .textarea, .form--filled .field.is-error .input-group {
+  background-color: var(--g-0);
+  border-color: var(--wf-color-error);
+}
+.form--filled .field.is-error .input-group .input, .form--filled .field.is-error .input-group .select { background-color: transparent; }
+.form--filled .choice-card { background: var(--fill-control); border-color: transparent; }
+.form--filled .choice-card:has(input:checked), .form--filled .choice-card.is-on { background: var(--g-0); border-color: var(--g-800); }
+.form--filled .choice-card:has(input:disabled), .form--filled .choice-card.is-disabled { background: var(--fill-control-disabled); border-color: transparent; }
+.form--filled .field.is-error .choice-card { background: var(--g-0); border-color: var(--wf-color-error); }
+
+/* 切換開關：設定類的即時開關（不需要按儲存）。文字在左、開關在右，整列高 ≥48
+   <label class="switch-row"><span class="switch-row__label">文字</span><input type="checkbox" role="switch" class="switch" /></label> */
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-group); min-height: var(--h-row); font-size: var(--fs-body); cursor: pointer; }
+.switch-row__label { flex: 1; min-width: 0; }
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: var(--g-300) radial-gradient(circle at 14px 50%, var(--g-0) 11px, transparent 12px);
+  cursor: pointer;
+  transition: background-position 0.15s;
+}
+.switch:checked { background: var(--g-800) radial-gradient(circle at 34px 50%, var(--g-0) 11px, transparent 12px); }
+.switch:focus-visible { outline: 2px solid var(--g-800); outline-offset: 2px; }
+.switch:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* 合併輸入框（國碼＋號碼同一個框，中間細線分開） */
+.input-group {
+  display: flex;
+  align-items: center;
+  height: var(--h-input);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  overflow: hidden;
+}
+.input-group:focus-within { border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.input-group .select,
+.input-group .input { height: 100%; border: none; border-radius: 0; box-shadow: none; background: transparent; }
+.input-group .select {
+  padding: 0 32px 0 var(--pad-control);
+  font-weight: 600;
+  border-right: 1px solid var(--line);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.field.is-error .input-group .input, .field.is-error .input-group .select { border-top: none; border-bottom: none; border-left: none; background-color: transparent; }
+.field.is-error .input-group .input { border-right: none; }
+.input-group .input { flex: 1; }
+.input-group .input:focus, .input-group .select:focus { border: none; box-shadow: none; }
+.input-group .select:focus { border-right: 1px solid var(--line); }
+
+/* 驗證碼格子 */
+.code-cells { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap-item); }
+.code-cells .input { height: 58px; padding: 0; text-align: center; font-size: 22px; font-weight: 400; }
+
+/* ---- 分隔線 ----
+   原則：App 區塊之間用留白（28px）分，不畫線。真的需要線時只有兩種：
+   .divider         滿版：左右貼齊所在容器的邊（在 .scr__body 或其中的 .block 裡＝貼齊螢幕左右；在 .card 裡＝貼齊卡片左右）
+   .divider--inset  內縮：左邊從文字起點開始、右邊貼齊容器（清單列前面有圖示或頭像時用）
+   不存在「左右都留 20px 的短線」——那是最常見的反例 */
+.divider { height: 1px; border: none; margin: 0; background: var(--line); }
+.scr__body > .divider, .scr__body > .block > .divider { margin: 0 calc(-1 * var(--page-x)); }
+.card > .divider { margin: 0 calc(-1 * var(--pad-card)); }
+.scr__body > .divider--inset, .scr__body > .block > .divider--inset { margin: 0 calc(-1 * var(--page-x)) 0 0; }
+.card > .divider--inset { margin: 0 calc(-1 * var(--pad-card)) 0 0; }
+
+/* ---- 清單列 ----
+   .list          平鋪清單：放在 .scr__body（或其中的 .block）裡會自動滿版（列的底線貼齊螢幕左右），文字對齊頁面 20px 邊距。
+                  只在「列與列之間」畫線；第一列上方、最後一列下方都不畫（上方接導覽列或標題時不會疊線）。
+   .list--inset   列之間的線從文字起點開始（前面有頭像、圖示的清單）
+   .list--card    群組卡片清單（設定頁、會員資料）：圓角外框，線貼齊卡片左右
+   .list--bordered 需要上下收邊時才加（例：清單後面還接著別的內容，且留白不夠分辨） */
+.list { list-style: none; margin: 0; padding: 0; }
+.scr__body > .list, .scr__body > .block > .list { margin: 0 calc(-1 * var(--page-x)); }
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  min-height: var(--h-row);
+  padding: 12px var(--page-x);
+}
+.list > .list-row + .list-row { border-top: 1px solid var(--line); }
+.list--inset > .list-row + .list-row { border-top: none; background-image: linear-gradient(var(--line), var(--line)); background-size: calc(100% - var(--page-x) - var(--inset-lead, 0px)) 1px; background-position: right top; background-repeat: no-repeat; }
+.list--bordered { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.list--card { border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--g-25); overflow: hidden; }
+.scr__body > .list--card, .scr__body > .block > .list--card { margin: 0; }
+.list--card > .list-row { padding: 12px var(--pad-card); }
+/* 分組清單（設定頁另一種群組寫法，與 .list--card 二選一，同一 App 統一一種）：頁面淺灰底、每群白底滿寬、群間 16 灰帶、群上方灰色小標
+   <main class="scr__body scr__body--grouped">
+     <section class="block"><h2 class="list-group-title">帳戶</h2><ul class="list list--grouped">…</ul></section>
+   </main> */
+.scr__body--grouped { background: var(--g-100); gap: 16px; }
+.scr__body--grouped > .block { gap: 8px; }
+.list--grouped { background: var(--g-0); }
+.list-group-title { margin: 0; font-size: var(--fs-sub); font-weight: 500; line-height: var(--lh-tight); color: var(--g-600); }
+.list-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap-tight); }
+.list-row__title { font-size: var(--fs-body); font-weight: 600; line-height: 1.4; }
+.list-row__sub { font-size: var(--fs-sub); color: var(--g-500); line-height: 1.5; }
+.list-row__value { font-size: var(--fs-sub); color: var(--g-900); font-weight: 500; flex: none; }
+.list-row__chevron { width: 8px; height: 8px; border-right: 1.5px solid var(--g-400); border-top: 1.5px solid var(--g-400); transform: rotate(45deg); flex: none; margin-right: 4px; }
+
+/* ---- 卡片 ---- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: var(--pad-card);
+  background: var(--g-0);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-group);
+}
+.card--emphasis { border: 1.5px solid var(--g-800); }
+.card--muted { background: var(--g-25); }
+.card__title { font-size: var(--fs-section); font-weight: 700; line-height: var(--lh-tight); }
+/* 卡片標題組：標題與副標間距 8（包一層 .card__head；卡片內其他內容與標題組仍隔 12） */
+.card__head { display: flex; flex-direction: column; gap: var(--gap-item); }
+.card__sub { font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--g-500); }
+.site .card { padding: var(--web-pad-card); }
+.site .card__title { font-size: 20px; line-height: 30px; } /* 卡片標題同 h3：20（手機 18） */
+.site .card__sub { line-height: 24px; }
+@media (max-width: 640px) { .site .card__title { font-size: 18px; line-height: 28px; } }
+/* 可點擊的卡片（整張是連結或按鈕：<a class="card card--link">、<button class="card card--link">）：
+   有陰影；滑過陰影加深並上移 2px；鍵盤聚焦 2px 深色外框。純展示的卡片不加陰影 */
+.card--link { box-shadow: var(--shadow-card); color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out); }
+button.card--link { width: 100%; }
+.card--link:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+.card--link:active { box-shadow: var(--shadow-card); transform: none; }
+.card--link:focus-visible { outline: 2px solid var(--g-800); outline-offset: 2px; }
+@media (hover: none) { .card--link:hover { box-shadow: var(--shadow-card); transform: none; } }
+@media (prefers-reduced-motion: reduce) { .card--link { transition: none; } .card--link:hover { transform: none; } }
+/* 整卡可點＋收藏／加購鈕（前台列表卡）：卡片用 <article class="card card--link">，標題連結 .card__hit 的點擊範圍撐滿整張卡；
+   收藏、加購鈕加 .card__over 疊在連結之上（不巢狀在連結裡），收藏鈕再加 .card__over--corner 放右上
+   <article class="card card--link">
+     <div class="ph-img" role="img" aria-label="商品圖"></div>
+     <button type="button" class="icon-btn card__over card__over--corner" aria-label="收藏" aria-pressed="false">…</button>
+     <div class="card__head"><h3 class="card__title"><a class="card__hit" href="item.html">商品名稱</a></h3><p class="card__sub">NT$ 1,280</p></div>
+     <button type="button" class="btn btn--secondary btn--sm card__over">加入購物車</button>
+   </article> */
+article.card--link, div.card--link { position: relative; cursor: default; }
+.card__hit { color: inherit; text-decoration: none; }
+.card__hit::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.card__hit:focus-visible { outline: none; }
+.card--link:has(.card__hit:focus-visible) { outline: 2px solid var(--g-800); outline-offset: 2px; }
+.card--link:has(.card__hit) { cursor: pointer; }
+.card__over { position: relative; z-index: 1; }
+.card__over--corner { position: absolute; top: calc(var(--pad-card) + 8px); right: calc(var(--pad-card) + 8px); background: var(--g-0); border-radius: var(--radius-pill); } /* 對齊卡片第一張圖的右上角 */
+.site .card__over--corner { top: calc(var(--web-pad-card, 20px) + 8px); right: calc(var(--web-pad-card, 20px) + 8px); }
+
+/* ---- 表格（Web） ---- */
+.table-wrap { width: 100%; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sub); }
+.table th, .table td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.table thead th { background: var(--g-50); font-weight: 700; border-bottom: 1px solid var(--g-400); }
+/* Web 表格：儲存格 16／26、表頭 15 淺灰底、內距上下 12 左右 16（列高約 50～56）；只畫橫線，不畫直線。
+   ≤640 不硬塞表格：換成卡片清單（每筆一張 .card，欄位名＋值兩欄），只有「需要逐欄比較」的表才保留並橫向捲動 */
+.site .table th, .site .table td { padding: 12px 16px; font-size: 16px; line-height: 26px; }
+.site .table thead th { font-size: 15px; font-weight: 600; background: var(--g-100); border-bottom: none; }
+
+/* ---- 標籤（不可點，顯示狀態或分類） ----
+   字級 14：標籤是要被讀的字，不用 12 以下的小字。 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-soft);
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--g-700);
+  background: var(--g-0);
+  white-space: nowrap;
+}
+.badge--solid { background: var(--g-800); border-color: var(--g-800); color: var(--g-0); font-weight: 600; }
+.badge--soft { background: var(--g-100); border-color: var(--g-100); color: var(--g-700); }
+.badges { display: flex; flex-wrap: wrap; gap: var(--gap-item); }
+
+/* ---- 可點選的 pill（篩選、單選／多選膠囊） ---- */
+.chips { display: flex; flex-wrap: wrap; gap: var(--gap-item); }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-tight);
+  height: var(--h-chip);
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-soft);
+  background: var(--g-0);
+  color: var(--g-700);
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"], .chip.is-on { background: var(--g-800); border-color: var(--g-800); color: var(--g-0); font-weight: 600; }
+.chips--multi .chip[aria-pressed="true"]::before, .chips--multi .chip.is-on::before {
+  /* 多選：選中時前面加 12px 勾勾（單選不加） */
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5L19.5 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.chip:disabled { background: var(--g-100); border-color: var(--g-100); color: var(--g-400); text-decoration: line-through; cursor: not-allowed; }
+
+/* ---- 日期格（橫向日期列，可左右滑）----
+   每格固定三列：星期幾／日期／狀態字（一般格狀態列留空），所以每格的星期與日期都在同一高度。
+   額滿：保留星期幾與日期，格子淡化＋日期下方小字「額滿」；不可把星期幾換成「滿」（使用者會看不出是星期幾）。
+   <ul class="date-strip">
+     <li><button type="button" class="date-cell" aria-pressed="true"><span class="date-cell__dow">六</span><span class="date-cell__day">17</span></button></li>
+     <li><button type="button" class="date-cell is-full" disabled aria-label="10/18（日）額滿"><span class="date-cell__dow">日</span><span class="date-cell__day">18</span><span class="date-cell__state">額滿</span></button></li>
+   </ul> */
+.date-strip { display: flex; gap: var(--gap-item); list-style: none; margin: 0; padding: 0; overflow-x: auto; scrollbar-width: none; }
+.scr__body > .date-strip, .scr__body > .block > .date-strip { margin: 0 calc(-1 * var(--page-x)); padding: 0 var(--page-x); }
+.date-cell {
+  flex: none;
+  width: 52px;
+  height: 72px;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  color: var(--g-900);
+  font: inherit;
+  cursor: pointer;
+}
+.date-cell__dow { font-size: var(--fs-sub); line-height: 1.2; color: var(--g-500); }
+.date-cell__day { font-size: 18px; font-weight: 600; line-height: 1.2; }
+.date-cell__state { font-size: var(--fs-caption); line-height: 1.1; color: var(--g-500); } /* wf-allow-small：狀態詞（額滿），格子淡化已傳達不可選 */
+.date-cell[aria-pressed="true"], .date-cell.is-on { background: var(--g-800); border-color: var(--g-800); color: var(--g-0); }
+.date-cell[aria-pressed="true"] .date-cell__dow, .date-cell.is-on .date-cell__dow { color: var(--g-0); }
+.date-cell.is-full, .date-cell:disabled { background: var(--g-50); border-color: var(--g-150); color: var(--g-400); cursor: not-allowed; }
+.date-cell.is-full .date-cell__dow, .date-cell:disabled .date-cell__dow { color: var(--g-400); }
+
+/* ---- 頁內提示句（區塊載入失敗、剛被約走、尚無紀錄）----
+   純文字＋可選的底線文字按鈕；不加外框、不加底色、不加圖示。
+   為什麼不包框：圓角框（尤其是 50px 左右高的長條）跟輸入框長得一樣，使用者會以為可以點進去打字。
+   <p class="notice">暫時無法載入，<button type="button" class="text-btn">再試一次</button></p> */
+.notice {
+  margin: 0;
+  font-size: var(--fs-sub);
+  line-height: 1.55;
+  color: var(--g-600);
+}
+/* 句子裡的文字按鈕：字級跟著句子；上下用內距撐出 44px 點擊範圍，不把行高撐開 */
+.notice .text-btn { min-height: 0; padding: 12px 0; margin: -12px 0; font-size: inherit; color: var(--g-800); }
+.notice--center { text-align: center; }
+/* 表單層級錯誤句（送出被擋且錯誤不只一欄、或後端回的錯對不到單一欄位）：
+   一句紅字（14／600），不加框、不加底、不加圖示——跟欄位錯誤是同一套「紅字」語言。
+   位置一律在「主按鈕正上方」，不放頁面頂端（送出被擋時畫面會捲到第一個錯誤欄位，頂端的字會被捲走）：
+   - App：寫在 .scr__foot 裡、主按鈕之後（置底區 column-reverse 會把它疊到按鈕上方，間距 --gap-foot）
+   - Web 沒有固定置底區：直接寫在送出按鈕的前一個
+   - Web 手機置底操作列 .action-bar：寫在按鈕之前，自動獨佔一行
+   三種寫法都會自動左右置中（跟下方按鈕對齊中線）；業務邊界那句（放在選項區旁）維持靠左 */
+.notice--error { color: var(--wf-color-error); font-weight: 600; }
+.scr__foot > .notice--error, .action-bar > .notice--error, .notice--error:has(+ .btn) { text-align: center; }
+.action-bar:has(> .notice--error) { flex-wrap: wrap; }
+.action-bar > .notice--error { flex: 0 0 100%; }
+
+/* ---- 圖片佔位（乾淨灰塊，不打叉、不寫字） ---- */
+.ph-img {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  background: var(--g-150);
+}
+.ph-img--square { aspect-ratio: 1 / 1; }
+.ph-img--avatar { width: 48px; height: 48px; aspect-ratio: auto; border-radius: 50%; flex: none; }
+
+/* ---- 全站對話框（alert）：只有兩種版型——單按鈕、左右雙按鈕 ----
+   畫在 .scr 裡（.scr 需 position: relative）；遮罩只在 alert 與 sheet 下方出現
+   <div class="alert-layer"><div class="alert">
+     <p class="alert__title">標題</p><p class="alert__desc">可省略的一句說明</p>
+     <div class="alert__acts"><button class="alert__btn">取消</button><button class="alert__btn alert__btn--primary">確定</button></div>
+   </div></div> */
+.scr { position: relative; }
+.alert-layer { position: absolute; inset: 0; z-index: var(--z-alert); background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 0 28px; }
+.alert { width: 100%; background: var(--g-0); border-radius: 14px; padding: 24px 20px 0; text-align: center; overflow: hidden; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18); }
+.alert__title { font-size: 17px; font-weight: 700; line-height: 1.35; }
+.alert__desc { margin-top: 8px; font-size: var(--fs-sub); line-height: 1.5; color: var(--g-600); }
+/* 按鈕列上方的線貼齊對話框左右（滿版），雙按鈕中間一條直線；左取消（500）｜右主要（600） */
+.alert__acts { display: flex; margin: 20px -20px 0; border-top: 1px solid var(--line); }
+.alert__btn { flex: 1; height: var(--h-row); border: 0; background: none; font: inherit; font-size: var(--fs-btn); font-weight: 500; color: var(--g-900); cursor: pointer; }
+.alert__btn + .alert__btn { border-left: 1px solid var(--line); }
+.alert__btn--primary { font-weight: 600; }
+/* 危險動作的確認鈕（刪除、移除、清除等不可逆動作）：紅字＋字重 600，放右邊 */
+.alert__btn--danger { font-weight: 600; color: var(--wf-color-error); }
+
+/* ---- 輕提示（toast）：只用在「已經發生」的結果，或「沒送出、字已退回輸入框」的提醒 ----
+   深色膠囊、白字 14／600（最小 14，不可再縮小）、一行；約 3 秒後淡出，不放按鈕、不需要操作。
+   位置：置底區（或輸入區）上緣再往上 12px，不壓住輸入框與按鈕。
+   - 放在 .scr__foot 裡：自動貼齊置底區上緣（推薦寫法）
+   - 直接放在 .scr 裡：預設離畫面底 130px（Home 條 34＋置底區 84＋12）；沒有置底區時加 .toast--low */
+.toast { position: absolute; left: 50%; bottom: 130px; z-index: var(--z-toast); transform: translateX(-50%); max-width: calc(100% - 2 * var(--page-x)); padding: 10px 16px; border-radius: var(--radius-pill); background: var(--g-800); color: var(--g-0); font-size: var(--fs-sub); font-weight: 600; line-height: 1.4; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.scr__foot > .toast { bottom: calc(100% + 12px); }
+.scr__foot--line > .toast { bottom: calc(100% + 13px); } /* 扣掉 1px 上邊線，與線的距離仍是 12 */
+.toast--low { bottom: 58px; }
+/* 可復原的操作：膠囊裡接一個「復原」文字鈕（白字底線），整個輕提示可點 */
+.toast__text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 附「復原」：白字 600 底線的文字鈕；點擊高 44（上下各凸出 toast 外 2px，靠負邊距不撐高 toast） */
+.toast--action { display: flex; align-items: center; gap: 12px; pointer-events: auto; padding-right: 8px; overflow: visible; }
+.toast__action { flex: none; min-height: var(--h-touch); margin: -12px 0; padding: 0 8px; border: none; background: none; font: inherit; font-weight: 600; color: var(--g-0); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; } /* 沒有置底區：Home 條 34＋24 */
+
+/* ---- 空狀態／整頁錯誤（內容區整塊沒資料或讀不到）----
+   圖示可省略：線框預設只放「一句標題（＋可省略的說明）＋可省略的一顆按鈕」。
+   整頁錯誤＝同一套版面，標題寫「〔對象〕載入失敗」，按鈕只在重試有用時給「再試一次」（.btn.btn--sm）。
+   .empty--fill：佔滿可捲動區並垂直置中（說明頁不要內容貼頂、下面一大片空白） */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--gap-group);
+  padding: 40px 12px;
+}
+.empty__icon { width: 72px; height: 72px; border-radius: 50%; background: var(--g-100); margin-bottom: 4px; }
+.empty__title { font-size: var(--fs-section); font-weight: 700; line-height: var(--lh-tight); }
+.empty__title--lg { font-size: var(--fs-title); }
+.empty__desc { font-size: var(--fs-sub); color: var(--g-500); line-height: 1.7; }
+.empty--fill { flex: 1; justify-content: center; }
+.empty .btn--sm { margin-top: 4px; }
+.scr .empty .btn--sm { height: var(--h-touch); } /* App 整頁錯誤的「再試一次」是畫面唯一動作：撐到點擊高 44 */
+
+/* ---- 載入骨架 ---- */
+.skeleton { display: block; height: 14px; max-width: 100%; background: var(--g-150); border-radius: 6px; animation: wf-pulse 1.4s ease-in-out infinite; } /* 一律區塊顯示、預設一行高：寫成 <span> 或只加 --short 也畫得出灰條 */
+.skeleton--line { height: 14px; }
+.skeleton--title { height: 22px; width: 60%; }
+.skeleton--block { height: 120px; }
+.skeleton--short { width: 40%; }
+@keyframes wf-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* ---- 摺疊問答（線只在題與題之間） ---- */
+.faq details { padding: 16px 0; }
+.faq details + details { border-top: 1px solid var(--line); }
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq details p { margin-top: 8px; color: var(--g-600); font-size: var(--fs-sub); line-height: 1.7; }
+
+/* ================= 3b 會動的元件（第一批：浮層、導覽、流程） =================
+   行為都由 proto.js 的 WfProto 提供（模擬鍵盤另載 proto-keyboard.js）；這裡只管長相與開合動態。
+   開合狀態一律用 hidden 屬性＋.is-open：關閉＝hidden、開啟＝拿掉 hidden 後下一格加 .is-open（才有動態）。
+   圖層高低只用第 0 段的 --z-* 變數，不在元件裡寫死 z-index。 */
+
+/* 浮層開場動態 */
+@keyframes wf-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wf-pop-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+.alert-layer:not([hidden]) { animation: wf-fade-in var(--dur-overlay) var(--ease-out); }
+.alert-layer:not([hidden]) .alert { animation: wf-pop-in var(--dur-overlay) var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .alert-layer:not([hidden]), .alert-layer:not([hidden]) .alert { animation: none; }
+}
+
+/* ---- 對話框：輸入型變體（短輸入：單一欄位，例：重新命名；與 alert 同一版型） ----
+   多欄位或長內容不用它，改用底部面板或獨立頁。
+   開啟時輸入框預帶原值並全選、不顯示錯誤；確認鈕一律可按，按下才檢查，
+   不符合時在輸入框下方顯示一句寫出正確條件的錯誤（例：「請輸入 1～20 個字的名稱」），內容改為正確後消失。
+   <div class="alert"><p class="alert__title">重新命名</p>
+     <div class="alert__field"><input class="input" value="目前的名稱" /></div>
+     <div class="alert__acts">…</div></div> */
+.alert__field { margin-top: 16px; text-align: left; }
+.alert__field .input { height: 44px; }
+.alert__field .field__error { margin-top: 8px; }
+.alert__btn:disabled { color: var(--g-400); cursor: not-allowed; }
+.alert__desc + .alert__field { margin-top: 12px; }
+.alert__field + .alert__field { margin-top: 12px; }
+.alert__field .select { height: 44px; }
+.alert__field .textarea { min-height: 88px; }
+
+/* ---- 底部面板（bottom sheet）：所在頁的延伸層，關閉後回到原頁 ----
+   <div class="sheet-layer" id="sheet-sort" hidden>
+     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-sort-title">
+       <div class="sheet__grab" aria-hidden="true"></div>
+       <div class="sheet__head"><p class="sheet__title" id="sheet-sort-title">排序方式</p>
+         <button type="button" class="icon-btn sheet__close" aria-label="關閉" data-wf-close>…</button></div>
+       <div class="sheet__body">
+         <button type="button" class="sheet__option is-on" data-wf-close>最新</button>
+       </div>
+       <div class="sheet__foot"><button type="button" class="btn btn--primary btn--block">套用</button></div>
+     </div>
+   </div>
+   點遮罩、按 ESC、按 × 都會關閉；遮罩是面板自己的底層（.sheet-layer 的底色）。 */
+.sheet-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: rgba(0, 0, 0, 0);
+  transition: background var(--dur-overlay) var(--ease-out);
+}
+.sheet-layer.is-open { background: var(--scrim); }
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(100% - 80px);
+  display: flex;
+  flex-direction: column;
+  background: var(--g-0);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--shadow-float);
+  transform: translateY(100%);
+  transition: transform var(--dur-overlay) var(--ease-out), bottom var(--dur-overlay) var(--ease-out);
+  padding-bottom: 34px; /* Home 條高度：面板內容不壓在 Home 條上 */
+}
+.sheet-layer.is-open .sheet { transform: none; }
+.sheet__grab { flex: none; width: 36px; height: 4px; margin: 8px auto 0; border-radius: var(--radius-pill); background: var(--g-300); }
+.sheet__head { flex: none; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; min-height: var(--h-nav); padding: 0 calc(var(--page-x) - 12px); }
+.sheet__head > :first-child:not(.icon-btn) { grid-column: 2; }
+.sheet__title { grid-column: 2; text-align: center; font-size: var(--fs-nav); font-weight: 600; line-height: var(--lh-tight); }
+.sheet__close { grid-column: 3; justify-self: end; }
+.sheet__body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px var(--page-x) 12px; display: flex; flex-direction: column; gap: var(--gap-group); }
+.sheet__foot { flex: none; padding: 12px var(--page-x) 8px; display: flex; flex-direction: column-reverse; gap: var(--gap-foot); }
+/* 面板裡的選項列：高度與主按鈕一致（52），整列可點；選中＝右側打勾＋字重 600 */
+.sheet__options { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--page-x)); }
+.sheet__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-group);
+  min-height: var(--h-btn);
+  padding: 0 var(--page-x);
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--g-900);
+  text-align: left;
+  cursor: pointer;
+}
+.sheet__option + .sheet__option { border-top: 1px solid var(--line); }
+.sheet__option.is-on, .sheet__option[aria-checked="true"] { font-weight: 600; }
+.sheet__option.is-on::after, .sheet__option[aria-checked="true"]::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c2c2c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---- 側邊抽屜（drawer）：整片從左滑入，固定寬，不擠壓背後內容 ----
+   <div class="drawer-layer" id="nav-drawer" hidden>
+     <nav class="drawer" aria-label="主選單"> <div class="drawer__head">…</div> <ul class="drawer__list">…</ul> </nav>
+   </div>
+   點遮罩、按 ESC 關閉。抽屜上緣讓出狀態列（狀態列是系統層，疊在遮罩與抽屜之上）。 */
+.drawer-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background: rgba(0, 0, 0, 0);
+  transition: background var(--dur-overlay) var(--ease-out);
+}
+.drawer-layer.is-open { background: var(--scrim); }
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 300px;
+  max-width: 84%;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 0 34px; /* 讓出狀態列與 Home 條 */
+  background: var(--g-0);
+  transform: translateX(-100%);
+  transition: transform var(--dur-overlay) var(--ease-out);
+  overflow-y: auto;
+}
+.drawer-layer.is-open .drawer { transform: none; }
+.drawer__head { display: flex; align-items: center; justify-content: space-between; min-height: var(--h-nav); padding: 0 calc(var(--page-x) - 12px) 0 var(--page-x); }
+.drawer__title { font-size: var(--fs-section); font-weight: 600; }
+.drawer__list { list-style: none; display: flex; flex-direction: column; }
+.drawer__item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-group);
+  width: 100%;
+  min-height: var(--h-btn);
+  padding: 0 var(--page-x);
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--g-900);
+  text-align: left;
+  cursor: pointer;
+}
+.drawer__item[aria-current="page"] { font-weight: 600; background: var(--g-100); }
+.drawer__icon { width: 24px; height: 24px; border-radius: 6px; background: var(--g-200); flex: none; }
+
+/* ---- 浮動更多選單（popmenu）：只靠陰影浮起、不壓遮罩；點選單外任何地方或 ESC 關閉 ----
+   觸發：<button class="icon-btn" aria-label="更多" data-wf-popmenu="row-menu">…</button>
+   <div class="popmenu" id="row-menu" role="menu" hidden>
+     <button type="button" class="popmenu__item" role="menuitem">重新命名</button>
+     <button type="button" class="popmenu__item popmenu__item--danger" role="menuitem">刪除</button>
+   </div>
+   位置由 proto.js 依觸發鈕計算：預設貼在觸發鈕下方、右緣對齊；下方放不下就翻到上方。 */
+.popmenu-catcher { position: absolute; inset: 0; z-index: var(--z-popmenu); background: transparent; }
+.popmenu {
+  position: absolute;
+  z-index: var(--z-popmenu);
+  min-width: 180px;
+  padding: 4px 0;
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: scale(0.96);
+  transform-origin: top right;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.popmenu.is-open { opacity: 1; transform: none; }
+.popmenu.is-up { transform-origin: bottom right; }
+.popmenu__item {
+  display: flex;
+  align-items: center;
+  min-height: var(--h-row);
+  padding: 0 16px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--g-900);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.popmenu__item + .popmenu__item { border-top: 1px solid var(--line); }
+/* 危險動作（刪除）：紅字，其餘同一般選項 */
+.popmenu__item--danger { color: var(--wf-color-error); }
+
+/* ---- 可選膠囊組外框容器（一組可複選或單選的膠囊＝圓角外框＋組名＋膠囊） ----
+   <div class="chip-group" role="group" aria-labelledby="g1">
+     <p class="chip-group__title" id="g1">想改善的地方（可複選）</p>
+     <div class="chips chips--multi" data-wf-select="multi"><button type="button" class="chip" aria-pressed="false">選項</button>…</div>
+   </div>
+   data-wf-select="single"｜"multi"：proto.js 自動處理點選（單選可再點一次取消）。 */
+.chip-group { display: flex; flex-direction: column; gap: var(--gap-group); padding: var(--pad-card); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--g-0); }
+.chip-group__title { font-size: var(--fs-sub); font-weight: 600; color: var(--g-700); }
+
+/* ---- 步驟進度（問卷、多步驟表單）：一條分段進度＋「第 n／共 m 題」 ----
+   <div class="steps-bar" data-wf-steps="3" data-wf-step="1"></div>  ← proto.js 依屬性畫出分段
+   或手寫：<div class="steps-bar"><div class="steps-bar__track"><i class="is-done"></i><i class="is-on"></i><i></i></div><p class="steps-bar__label">第 2／共 3 題</p></div> */
+.steps-bar { display: flex; flex-direction: column; gap: var(--gap-item); }
+.steps-bar__track { display: flex; gap: 4px; }
+.steps-bar__track i { flex: 1; height: 4px; border-radius: var(--radius-pill); background: var(--g-200); }
+.steps-bar__track i.is-done, .steps-bar__track i.is-on { background: var(--g-800); }
+.steps-bar__label { font-size: var(--fs-sub); color: var(--g-500); font-variant-numeric: tabular-nums; }
+
+/* ---- 驗證碼：錯誤字置中在格子下方；重送倒數 ---- */
+.code-cells + .field__error, .otp__error { text-align: center; }
+.code-cells .input.is-filled { border-color: var(--g-800); }
+.field.is-error .code-cells .input { border: 1.5px solid var(--wf-color-error); }
+/* 重新發送：倒數中停用（灰字、不加底線）；倒數完變可點的文字鈕 */
+.text-btn:disabled, .text-btn[aria-disabled="true"] { color: var(--g-400); text-decoration: none; cursor: default; }
+.otp-foot { display: flex; justify-content: center; }
+
+/* ---- 進度條（可量化：上傳）與不定式轉圈（不可量化：分析中） ----
+   <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40">
+     <div class="progress__track"><div class="progress__fill" style="width:40%"></div></div>
+     <p class="progress__label">上傳中 40%</p></div>
+   <div class="loader"><span class="spinner" aria-hidden="true"></span><p class="loader__text" aria-live="polite">正在整理資料</p></div> */
+.progress { display: flex; flex-direction: column; gap: var(--gap-item); }
+.progress__track { height: 8px; border-radius: var(--radius-pill); background: var(--g-150); overflow: hidden; }
+.progress__fill { height: 100%; width: 0; border-radius: var(--radius-pill); background: var(--g-800); transition: width 200ms linear; }
+.progress__label { font-size: var(--fs-sub); color: var(--g-600); font-variant-numeric: tabular-nums; text-align: center; }
+.spinner { display: inline-block; width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--g-200); border-top-color: var(--g-800); animation: wf-spin 0.9s linear infinite; }
+.spinner--sm { width: 20px; height: 20px; border-width: 2px; }
+@keyframes wf-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+.loader { display: flex; flex-direction: column; align-items: center; gap: var(--gap-group); padding: 24px 0; text-align: center; }
+.loader__text { font-size: var(--fs-body); color: var(--g-700); min-height: 24px; }
+
+/* ---- 權限前置說明頁（主功能要用相機、麥克風、通知前，先放一頁說明，按「繼續」才跳系統框） ----
+   內容垂直置中：圖示佔位＋標題＋一句為什麼需要＋（置底）主按鈕「繼續」 */
+.perm { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--gap-group); text-align: center; padding: 0 8px; }
+.perm__icon { width: 72px; height: 72px; border-radius: 20px; background: var(--g-150); margin-bottom: 8px; }
+.perm__title { font-size: var(--fs-title); font-weight: 700; line-height: var(--lh-tight); }
+.perm__desc { font-size: var(--fs-sub); color: var(--g-600); line-height: 1.7; }
+/* 系統權限框（模擬作業系統的詢問框）：長相同 alert，標題可兩行 */
+.alert--system .alert__title { font-size: var(--fs-body); }
+
+/* ---- 分段頁籤（tabs：底線式，切換同一頁的內容分類）與膠囊分段（seg：切換檢視方式） ----
+   <div class="tabs" role="tablist" data-wf-tabs>
+     <button type="button" class="tabs__tab" role="tab" aria-selected="true" aria-controls="tp-1">全部</button> …</div>
+   <div id="tp-1" role="tabpanel">…</div>
+   Tab 字 14：未選 500 中灰、選中 600 近黑＋2px 底線；不放大字級。 */
+.tabs { display: flex; flex-shrink: 0; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; } /* flex-shrink: 0＝放進可捲動的直向容器（抽屜、對話框）不被壓扁 */
+.scr__body > .tabs, .scr__body > .block > .tabs { margin: 0 calc(-1 * var(--page-x)); padding: 0 calc(var(--page-x) - 12px); }
+.tabs__tab {
+  flex: none;
+  height: var(--h-touch);
+  padding: 0 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--g-500);
+  cursor: pointer;
+}
+.tabs--fill .tabs__tab { flex: 1; }
+.tabs__tab[aria-selected="true"] { color: var(--g-900); font-weight: 600; border-bottom-color: var(--g-900); }
+.seg { display: flex; flex-shrink: 0; padding: 4px; gap: 4px; border-radius: var(--radius-pill); background: var(--g-100); }
+.seg__item {
+  flex: 1;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--g-600);
+  cursor: pointer;
+}
+.seg__item[aria-selected="true"] { background: var(--g-0); color: var(--g-900); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+
+/* ---- 搜尋欄：放大鏡＋輸入＋（有字時才出現的）圓形清除鈕，全欄只有一顆清除鈕 ----
+   <div class="search"><span class="search__icon" aria-hidden="true"></span>
+     <input class="search__input" type="search" placeholder="搜尋紀錄" />
+     <button type="button" class="search__clear" aria-label="清除" hidden></button></div> */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 4px 0 40px;
+  border-radius: var(--radius);
+  background: var(--g-100);
+}
+.search__icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8b8b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.search__input { flex: 1; min-width: 0; height: 100%; border: none; background: none; font: inherit; font-size: var(--fs-body); color: var(--g-900); outline: none; }
+.search__input::placeholder { color: var(--g-500); }
+.search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; } /* 不用瀏覽器內建的清除鈕，避免出現兩顆 */
+.search:focus-within { background: var(--g-0); box-shadow: inset 0 0 0 1.5px var(--g-800); }
+.search__clear {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='%23aeaeae'/%3E%3Cpath d='M9 9l6 6M15 9l-6 6' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+  cursor: pointer;
+}
+.search-row { display: flex; align-items: center; gap: var(--gap-item); }
+.search-row .search { flex: 1; }
+
+/* ---- 紀錄列（歷史紀錄、檔案、訂單）：主標＋日期副標，右側箭頭或更多鈕；同一清單每列等高 ----
+   <li class="list-row record-row"><button type="button" class="record-row__hit" data-wf-go="detail.html">
+       <span class="list-row__main"><span class="list-row__title">標題</span><span class="list-row__sub">2026/10/15 14:20</span></span>
+       <span class="list-row__chevron" aria-hidden="true"></span></button>
+     <button type="button" class="icon-btn" aria-label="更多" data-wf-popmenu="m1">…</button></li>
+   變體：.record-row--thumb（前面加 .ph-img 縮圖，列高 72）。 */
+.record-row { padding-right: calc(var(--page-x) - 12px); }
+.record-row__hit { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--gap-group); min-height: var(--h-row); padding: 0; border: none; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.record-row--thumb { min-height: 72px; }
+.record-row--thumb .ph-img { width: 48px; height: 48px; aspect-ratio: auto; flex: none; border-radius: 8px; }
+.record-row .icon-btn { flex: none; }
+.icon-btn--more svg { stroke: none; fill: currentColor; }
+/* 載入更多：清單尾端一顆次要按鈕；自動載入時改顯示一列小轉圈 */
+.load-more { display: flex; justify-content: center; align-items: center; gap: var(--gap-item); min-height: var(--h-btn); font-size: var(--fs-sub); color: var(--g-500); }
+.list-end { text-align: center; font-size: var(--fs-sub); color: var(--g-500); padding: 12px 0; }
+
+/* ---- 模擬鍵盤（選配：頁面另載 ../assets/proto-keyboard.js 才會出現）----
+   系統層：疊在所有浮層之上。升起時依焦點所在位置讓位：
+   - 一般頁（.is-kb-page）：可捲動區縮短，置底區（主按鈕）貼在鍵盤上緣；內容不位移
+   - 底部面板裡（.is-kb-sheet）：只有面板往上推到鍵盤上緣，背後頁面不動
+   - 對話框裡（.is-kb-alert）：對話框在鍵盤以上的空間置中，背後頁面不動 */
+.scr { transition: padding-bottom var(--dur-overlay) var(--ease-out); }
+.scr.is-kb-page { padding-bottom: var(--kb-h); }
+.scr.is-kb-page .homebar { display: none; } /* 鍵盤蓋住 Home 條的位置 */
+.scr.is-kb-sheet .sheet-layer.is-open .sheet { bottom: var(--kb-h); padding-bottom: 8px; max-height: calc(100% - var(--kb-h) - 80px); }
+.scr.is-kb-alert .alert-layer { padding-bottom: var(--kb-h); transition: padding-bottom var(--dur-overlay) var(--ease-out); }
+.kb {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-system);
+  padding: 0 4px 36px;
+  background: var(--g-200);
+  transform: translateY(100%);
+  transition: transform var(--dur-overlay) var(--ease-out);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.kb.is-open { transform: none; }
+.kb[hidden] { display: none !important; }
+/* 鍵盤上方候選列（驗證碼「從訊息」候選碼放這裡） */
+.kb__suggest { height: 44px; display: flex; align-items: center; justify-content: center; }
+.kb__chip { display: inline-flex; flex-direction: column; align-items: center; gap: 0; padding: 0 16px; border: none; background: none; font: inherit; color: var(--g-900); cursor: pointer; }
+.kb__chip b { font-size: var(--fs-body); font-weight: 600; letter-spacing: 1px; }
+.kb__chip span { font-size: var(--fs-sub); color: var(--g-600); }
+.kb__rows { display: flex; flex-direction: column; gap: 12px; }
+.kb__row { display: flex; justify-content: center; gap: 4px; }
+.kb__row--inset { padding: 0 16px; }
+.kb__key {
+  flex: 1;
+  height: 44px;
+  min-width: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--g-0);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+  font: inherit;
+  font-size: 20px;
+  color: var(--g-900);
+  cursor: pointer;
+}
+.kb__key--util { flex: 1.4; background: var(--g-300); font-size: var(--fs-sub); }
+.kb__key--space { flex: 4.6; font-size: var(--fs-sub); }
+/* 表單可送出時，完成鍵變「送出」並轉深色（一按就等於按頁面主按鈕） */
+.kb__key--go { background: var(--g-800); color: var(--g-0); font-weight: 600; }
+.kb__pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 4px; }
+.kb__pad .kb__key { height: 48px; font-size: 24px; }
+.kb__pad .kb__key--blank { background: none; box-shadow: none; cursor: default; }
+
+/* ---- Web 頁（.site 底下）浮層改固定在視窗上；底部面板在寬螢幕置中、最寬 560 ---- */
+.site ~ .sheet-layer, .site ~ .drawer-layer, .site ~ .alert-layer, .site ~ .popmenu-catcher,
+body > .sheet-layer, body > .drawer-layer, body > .alert-layer, body > .popmenu-catcher { position: fixed; }
+body > .popmenu, body > .toast { position: fixed; }
+body > .sheet-layer .sheet { left: 0; right: 0; margin: 0 auto; max-width: 560px; padding-bottom: 12px; }
+body > .drawer-layer .drawer { padding-top: 0; }
+body > .alert-layer .alert { max-width: 400px; }
+
+/* ================= 3c Web 後台元件（資料表格、分頁、篩選列、側邊導覽、麵包屑、描述清單、統計數字卡、結果頁、通知橫幅、提示泡泡） =================
+   數值見 ../../shared/線框視覺基本盤.md：版心 1200、邊距 24／20、按鈕與輸入 44、表格小按鈕 32（手機 44）、
+   內文 16、輔助 14、間距 4 的倍數；灰階，錯誤狀態與危險動作例外用紅色。
+   行為由 proto.js 提供（data-wf-table、data-wf-pagination、data-wf-filter、data-wf-sidenav…），
+   互動規則見 ../../shared/knowledge/interaction-patterns/Web互動通用規則.md。 */
+
+/* ---- 資料表格（後台列表）：外框卡＋批次操作列＋表格＋狀態列＋分頁 ----
+   <div class="data-table" id="orders" data-wf-table>
+     <div class="bulk-bar" hidden>…</div>
+     <div class="table-wrap"><table class="table table--data table--stack" style="--table-min: 960px">…</table></div>
+     <nav class="pagination" data-wf-pagination data-wf-for="orders">…</nav>
+   </div>
+   ≤640 加了 .table--stack 的表變成卡片清單：每筆一張卡，欄位名（td 的 data-label）＋值兩欄。 */
+.data-table { position: relative; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--g-0); overflow: hidden; }
+.data-table:focus { outline: none; } /* 換頁後焦點移到表格開頭（tabindex="-1"），不畫外框；鍵盤使用者接著按 Tab 從表格第一個控制項開始 */
+.data-table .table-wrap { overflow-x: auto; }
+.table--data { min-width: var(--table-min, 100%); }
+.data-table .table th, .data-table .table td { vertical-align: middle; }
+.data-table .table tbody tr:last-child > td { border-bottom: none; }
+.data-table > .table-wrap + .pagination, .data-table > .table-wrap ~ .pagination { border-top: 1px solid var(--line); }
+/* 數字欄靠右、等寬數字；不換行欄；主欄（名稱）可折兩行並加粗 */
+.table__num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table__nowrap { white-space: nowrap; }
+.table__primary { font-weight: 600; min-width: 160px; }
+.table__link { font-weight: 600; color: var(--g-900); text-decoration: underline; text-underline-offset: 3px; }
+/* 勾選欄：框 20、點擊範圍 32（表格小按鈕尺寸） */
+.table__check { width: 52px; padding-right: 0 !important; }
+.table__check-hit { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -4px 0 -4px -6px; cursor: pointer; }
+.table__check-text { display: none; }
+/* 列內操作欄：靠右、不換行；圖示鈕 32（手機 44） */
+.table__actions { width: 1%; white-space: nowrap; text-align: right !important; }
+.data-table .table .icon-btn { width: 32px; height: 32px; border-radius: 8px; margin: -4px 0; }
+.data-table .table .icon-btn svg { width: 20px; height: 20px; }
+/* 固定欄：橫向捲動時首欄或尾欄不跟著捲走（自己有底色，邊上一條線） */
+.table__sticky-start { position: sticky; left: 0; z-index: 1; background: var(--g-0); box-shadow: inset -1px 0 0 var(--line); }
+.table__sticky-end { position: sticky; right: 0; z-index: 1; background: var(--g-0); box-shadow: inset 1px 0 0 var(--line); }
+.table thead .table__sticky-start, .table thead .table__sticky-end { background: var(--g-100); }
+/* 列的滑過與選取：選取＝淺灰底（勾選框同時打勾，不只靠底色） */
+.data-table tbody tr:hover > td { background: var(--g-25); }
+.data-table tbody tr.is-selected > td { background: var(--g-100); }
+
+/* 欄排序：表頭文字做成按鈕；只有目前排序欄有 aria-sort。三種圖示形狀不同：未排序＝上下雙箭頭、升冪＝向上、降冪＝向下 */
+.table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin: -4px -8px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.table__sort:hover { background: var(--g-150); }
+.table__sort::after {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23767676' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 6l3-3 3 3M5 10l3 3 3-3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+th[aria-sort="ascending"] .table__sort::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23111111' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 13V3M4 7l4-4 4 4'/%3E%3C/svg%3E"); }
+th[aria-sort="descending"] .table__sort::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23111111' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3v10M4 9l4 4 4-4'/%3E%3C/svg%3E"); }
+th[aria-sort] { color: var(--g-900); }
+.table__num .table__sort { flex-direction: row-reverse; }
+
+/* 批次操作列：有勾選才出現，浮在視窗底部（固定、不隨捲動走），水平置中於表格（內容區）；
+   左＝已選幾筆＋取消選取，右＝批次動作（小按鈕）。
+   距視窗底 24、最小高 56、內距 8／16、圓角 12、白底＋淺灰框＋浮層陰影；寬依內容，最寬 720 且不超過表格寬減 32；
+   ≤640 左右各 16 滿版、距視窗底 16、按鈕高 44。
+   proto.js 寫入 --bulk-cx（表格中線）、--bulk-max（表格寬），並在表格下方預留 --bulk-space，最後一列與分頁不被蓋住 */
+.bulk-bar {
+  position: fixed;
+  left: var(--bulk-cx, 50%);
+  bottom: 24px;
+  z-index: var(--z-bulk);
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  width: max-content;
+  max-width: min(720px, calc(var(--bulk-max, 100vw) - 32px));
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+  font-size: 15px;
+}
+.bulk-bar[hidden] { display: none; }
+.bulk-bar__count { font-weight: 600; font-variant-numeric: tabular-nums; }
+.bulk-bar .text-btn { min-height: 32px; color: var(--g-800); }
+.bulk-bar__acts { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.data-table.has-bulk-open { margin-bottom: var(--bulk-space, 96px); }
+body > .toast { bottom: var(--wf-bulk-offset, 32px); } /* 批次操作列開著時，輕提示疊在它上方 12 */
+
+/* 表格狀態（proto.js 依 data-wf-table 狀態產生）：載入中＝骨架列；空、篩到零、讀取失敗＝表內一整列置中訊息，表頭保留 */
+.table__skeleton .skeleton--line { height: 16px; max-width: 160px; }
+.table__state > tr > td { padding: 0 !important; background: var(--g-0) !important; }
+.table__state .empty { padding: 48px 16px; }
+
+/* 手機寬（≤640）：表格改卡片清單。表頭只留「全選本頁」與可排序的欄位按鈕，排成一列 */
+@media (max-width: 640px) {
+  .data-table:has(.table--stack) { border: none; border-radius: 0; overflow: visible; }
+  .data-table:has(.table--stack) .table-wrap { overflow: visible; }
+  .bulk-bar { left: 16px; right: 16px; bottom: 16px; transform: none; width: auto; max-width: none; }
+  .bulk-bar .btn--sm, .bulk-bar .text-btn { min-height: 44px; }
+  .data-table:has(.table--stack) > .table-wrap ~ .pagination { border-top: none; padding: 12px 0 0; }
+  .table--stack { min-width: 0 !important; }
+  .table--stack, .table--stack thead, .table--stack tbody { display: block; }
+  .table--stack thead tr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 16px; margin-bottom: 12px; border-radius: var(--radius); background: var(--g-100); }
+  .table--stack thead th { display: none; padding: 0 !important; background: none !important; }
+  .table--stack thead th.table__check, .table--stack thead th:has(.table__sort) { display: block; width: auto; }
+  .table--stack .table__check-text { display: inline; font-size: var(--fs-sub); font-weight: 600; }
+  .table--stack .table__check-hit { width: auto; gap: 8px; height: 44px; margin: 0; }
+  .table--stack .table__sort { min-height: 44px; margin: 0; padding: 0 4px; font-size: var(--fs-sub); }
+  .table--stack tbody { display: flex; flex-direction: column; gap: 12px; }
+  .table--stack tbody tr { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); }
+  .table--stack tbody tr > td { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; grid-column: 2; padding: 4px 0 !important; border: none; text-align: left !important; white-space: normal; background: none !important; }
+  .table--stack tbody td::before { content: attr(data-label); font-size: var(--fs-sub); line-height: 26px; color: var(--g-500); }
+  .table--stack tbody td > * { justify-self: start; }
+  .table--stack tbody td.table__check { grid-column: 1; grid-row: 1 / span 20; display: block; width: auto; }
+  .table--stack tbody td.table__check::before, .table--stack tbody td.table__primary::before { content: none; }
+  .table--stack tbody td.table__primary { display: block; font-size: var(--fs-btn); }
+  .table--stack tbody td.table__actions { display: flex; justify-content: flex-start; width: auto; }
+  .table--stack tbody td.table__actions::before { content: none; }
+  .table--stack tbody tr.is-selected { background: var(--g-100); border-color: var(--g-400); }
+  .table--stack .table__sticky-start, .table--stack .table__sticky-end { position: static; box-shadow: none; }
+  .data-table .table--stack .icon-btn { width: var(--h-touch); height: var(--h-touch); margin: 0; }
+  .table--stack .table__state, .table--stack .table__skeleton { display: block; }
+  .table--stack .table__state > tr, .table--stack .table__state > tr > td { display: block; border: none; padding: 0 !important; }
+  .table--stack .table__state > tr > td::before { content: none; }
+  .table--stack .table__skeleton > tr { display: flex; flex-direction: column; gap: 8px; }
+  .table--stack .table__skeleton > tr > td { display: block; }
+  .table--stack .table__skeleton > tr > td::before { content: none; }
+}
+
+/* ---- 分頁：放在表格同一張卡的底部（上緣一條線）；左＝總筆數與每頁筆數，右＝上一頁／頁碼／下一頁 ----
+   <nav class="pagination" aria-label="分頁" data-wf-pagination data-wf-for="orders" data-wf-page-size="10"></nav>
+   內容由 proto.js 產生；頁碼前後各留一頁，其餘收成「…」。≤640 只留上一頁／「第 n／共 m 頁」／下一頁（高 44） */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 12px 16px;
+  font-size: var(--fs-sub);
+  line-height: 24px;
+  color: var(--g-600);
+}
+.pagination__info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-variant-numeric: tabular-nums; }
+.pagination__size { display: inline-flex; align-items: center; gap: 8px; }
+.pagination__size .select {
+  width: auto;
+  height: 32px;
+  padding: 0 32px 0 12px;
+  border-radius: 8px;
+  font-size: var(--fs-sub);
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--g-0) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 8px center / 16px no-repeat;
+}
+.pagination__pages { list-style: none; display: flex; align-items: center; gap: 8px; }
+.pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--g-0);
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--g-700);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pagination__btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pagination__btn:hover { border-color: var(--g-500); }
+.pagination__btn[aria-current="page"] { background: var(--g-800); border-color: var(--g-800); color: var(--g-0); font-weight: 600; }
+.pagination__btn:disabled { border-color: var(--g-150); color: var(--g-400); cursor: not-allowed; }
+.pagination__gap { min-width: 24px; text-align: center; color: var(--g-500); }
+.pagination__status { display: none; }
+@media (max-width: 640px) {
+  .pagination { flex-direction: column; align-items: stretch; }
+  .pagination__pages { justify-content: space-between; }
+  .pagination__btn { height: var(--h-touch); min-width: var(--h-touch); padding: 0 12px; }
+  .pagination__num, .pagination__gap { display: none; }
+  .pagination__status { display: block; flex: 1; text-align: center; color: var(--g-900); font-weight: 600; }
+  .pagination__size .select { height: var(--h-touch); }
+}
+
+/* ---- 篩選列：搜尋＋篩選下拉＋已套用條件（可逐一移除）＋清除全部 ----
+   <div class="filter-bar" data-wf-filter data-wf-for="orders">
+     <div class="filter-bar__row">
+       <div class="search filter-bar__search">…</div>
+       <div class="filter-bar__controls"><div class="filter-select" data-wf-filter-key="status">…</div></div>
+     </div>
+     <div class="filter-bar__applied" hidden>…</div>
+   </div> */
+.filter-bar { display: flex; flex-direction: column; gap: 12px; }
+.filter-bar__row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.filter-bar__search { flex: 1 1 280px; max-width: 400px; }
+.filter-bar__controls { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) {
+  .filter-bar__search { flex-basis: 100%; max-width: none; }
+}
+/* 篩選下拉：按鈕＝「欄位名＋目前值」；有套用值時框線加深＋值加粗 */
+.filter-select { position: relative; }
+.filter-select__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  font: inherit;
+  font-size: 15px;
+  color: var(--g-700);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.filter-select__btn::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 160ms var(--ease-out);
+}
+.filter-select__btn[aria-expanded="true"]::after { transform: rotate(180deg); }
+.filter-select__value { color: var(--g-500); }
+.filter-select.is-active .filter-select__btn, .filter-range.is-active .filter-select__btn { border-color: var(--g-800); box-shadow: inset 0 0 0 1px var(--g-800); }
+.filter-select.is-active .filter-select__value, .filter-range.is-active .filter-select__value { color: var(--g-900); font-weight: 600; }
+.filter-select__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-popmenu);
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+  list-style: none;
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+}
+.filter-select__menu.is-right { left: auto; right: 0; }
+.filter-select__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--h-touch);
+  padding: 0 16px;
+  font-size: 15px;
+  color: var(--g-900);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.filter-select__option:hover { background: var(--g-50); }
+.filter-select__option:focus-visible { outline-offset: -2px; background: var(--g-100); }
+.filter-select__option[aria-selected="true"] { font-weight: 600; }
+.filter-select__option[aria-selected="true"]::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c2c2c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* 已套用條件：一列可移除的條件標籤＋「清除全部」 */
+.filter-bar__applied { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.filter-bar__applied-label { font-size: var(--fs-sub); color: var(--g-500); }
+.filter-tags { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 4px 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--g-100);
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--g-800);
+  white-space: nowrap;
+}
+.filter-tag__remove {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4.5 4.5l7 7M11.5 4.5l-7 7'/%3E%3C/svg%3E") center / 14px no-repeat;
+  cursor: pointer;
+}
+.filter-tag__remove:hover { background-color: var(--g-200); }
+.filter-bar__applied .text-btn { min-height: 32px; color: var(--g-800); }
+
+/* ---- Web 後台外框：固定頂列＋可收合側邊導覽＋主要內容 ----
+   <div class="site site--admin">
+     <header class="admin-bar"><button class="icon-btn admin-bar__menu" data-wf-sidenav-collapse="sidenav">☰</button><Logo>…</header>
+     <div class="admin">
+       <nav class="sidenav" id="sidenav" aria-label="主選單" data-wf-sidenav>…</nav>
+       <main class="admin__main"><div class="container admin__body">…</div></main>
+     </div>
+   </div>
+   收合／展開按鈕在上方：頂列 Logo 左邊的選單圖示鈕（預設），或側欄最上方與產品名稱同一列（.sidenav__top）；不放側欄最下方。
+   ≥1100：側欄在內容左側，按選單鈕收合成 72 寬的圖示列、再按展開；≤1099：側欄藏起來，同一顆選單鈕負責從左滑出抽屜 */
+.site--admin { --admin-bar-h: 64px; background: var(--g-0); }
+.admin-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--admin-bar-h);
+  padding: 0 var(--web-x, 20px);
+  border-bottom: 1px solid var(--line);
+  background: var(--g-0);
+}
+.admin-bar__menu { display: none; margin-left: -12px; }
+.admin-bar__menu[data-wf-sidenav-collapse] { display: inline-flex; } /* 預設做法：任何寬度都在，≥1100 收合／展開、≤1099 開抽屜 */
+.admin-bar__title { font-size: var(--fs-btn); font-weight: 700; white-space: nowrap; }
+.admin-bar__actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.admin { display: flex; align-items: flex-start; min-height: calc(100vh - var(--admin-bar-h)); }
+.admin__main { flex: 1; min-width: 0; }
+.admin__body { display: flex; flex-direction: column; gap: 24px; padding-top: 24px; padding-bottom: 48px; }
+@media (max-width: 640px) { .admin__body { gap: 16px; padding-top: 16px; } }
+/* 頁首：麵包屑在標題上方；右側動作按鈕（手機掉到下一行） */
+.admin-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.admin-head__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.admin-head__sub { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+.admin-head__acts { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 頁首（標題列）上的操作按鈕：高 40（手機 44）；表單送出等主要動作按鈕維持 44 */
+.site .admin-head__acts .btn { height: 40px; padding: 0 16px; font-size: 15px; }
+@media (max-width: 640px) { .site .admin-head__acts .btn { height: var(--h-touch); } }
+
+/* 側邊導覽：展開 240、收合 72；項目高 44、圖示 20；目前頁＝淺灰底＋字重 600 */
+.sidenav {
+  flex: none;
+  position: sticky;
+  top: var(--admin-bar-h, 64px);
+  width: 240px;
+  height: calc(100vh - var(--admin-bar-h, 64px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--g-25);
+  transition: width var(--dur-overlay) var(--ease-out);
+}
+.sidenav__head { display: none; align-items: center; justify-content: space-between; min-height: var(--h-touch); padding-left: 12px; }
+.sidenav__head-title { font-size: var(--fs-btn); font-weight: 700; }
+.sidenav__group { display: flex; flex-direction: column; gap: 4px; }
+.sidenav__group-title { display: flex; align-items: center; height: 32px; padding: 0 12px; font-size: var(--fs-sub); font-weight: 600; color: var(--g-500); white-space: nowrap; }
+.sidenav__list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.sidenav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--h-touch);
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--g-700);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sidenav__item:hover { background: var(--g-100); color: var(--g-900); }
+.sidenav__item[aria-current]:not([aria-current="false"]) { background: var(--g-150); color: var(--g-900); font-weight: 600; }
+.sidenav__icon { flex: none; width: 20px; height: 20px; border-radius: 6px; background: var(--g-300); }
+.sidenav__item[aria-current]:not([aria-current="false"]) .sidenav__icon { background: var(--g-700); }
+.sidenav__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* 替代做法：側欄最上方一列＝產品名稱＋收合鈕（只在 ≥1100 出現；抽屜有自己的標題列） */
+.sidenav__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--h-touch); padding-left: 12px; }
+.sidenav__top-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-btn); font-weight: 700; }
+@media (min-width: 1100px) {
+  /* 收合成圖示列：只留圖示，文字收起（讀屏仍讀得到），群組標題換成一條線；滑過或鍵盤聚焦顯示提示泡泡 */
+  .sidenav.is-collapsed { width: 72px; }
+  .sidenav.is-collapsed .sidenav__label, .sidenav.is-collapsed .sidenav__group-title {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .sidenav.is-collapsed .sidenav__group + .sidenav__group { padding-top: 12px; border-top: 1px solid var(--line); }
+  .sidenav.is-collapsed .sidenav__item { justify-content: center; padding: 0; }
+  .sidenav.is-collapsed .sidenav__top { justify-content: center; padding-left: 0; }
+  .sidenav.is-collapsed .sidenav__top-title { display: none; }
+}
+@media (max-width: 1099px) {
+  /* 窄寬度：側欄變成從左滑出的抽屜（寬 280，最多 84%），點遮罩、Esc、× 關閉 */
+  .admin-bar__menu { display: inline-flex; }
+  .sidenav {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: calc(var(--z-drawer) + 1);
+    width: 280px;
+    max-width: 84%;
+    height: auto;
+    border-right: none;
+    background: var(--g-0);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--dur-overlay) var(--ease-out), visibility 0s linear var(--dur-overlay);
+  }
+  .sidenav.is-open { transform: none; visibility: visible; box-shadow: var(--shadow-float); transition: transform var(--dur-overlay) var(--ease-out); }
+  .sidenav__head { display: flex; }
+  .sidenav__top { display: none; }
+}
+.sidenav-scrim { position: fixed; inset: 0; z-index: var(--z-drawer); background: var(--scrim); animation: wf-fade-in var(--dur-overlay) var(--ease-out); }
+
+/* ---- 麵包屑：頁首下、頁面標題上；最後一項＝目前頁（不可點）；分隔符號用 CSS 畫，不被讀出 ----
+   <nav class="breadcrumb" aria-label="麵包屑" data-wf-breadcrumb><ol class="breadcrumb__list">
+     <li class="breadcrumb__item"><a class="breadcrumb__link" href="#">首頁</a></li>
+     <li class="breadcrumb__item"><span aria-current="page">訂單管理</span></li>
+   </ol></nav>
+   超過 4 層時中段收成「…」（點了展開）；≤640 只留上一層，前面加返回箭頭 */
+.breadcrumb { font-size: var(--fs-sub); line-height: 24px; color: var(--g-600); }
+.breadcrumb__list { list-style: none; display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; }
+.breadcrumb__item { display: inline-flex; align-items: center; min-width: 0; }
+.breadcrumb__item + .breadcrumb__item::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23767676' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4l4 4-4 4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.breadcrumb__link { color: var(--g-600); text-decoration: underline; text-underline-offset: 3px; border-radius: 4px; }
+.breadcrumb__link:hover { color: var(--g-900); }
+.breadcrumb__item [aria-current="page"] { color: var(--g-900); font-weight: 600; }
+.breadcrumb__more { min-width: 32px; height: 24px; padding: 0 4px; border: none; border-radius: 6px; background: none; font: inherit; color: var(--g-600); cursor: pointer; }
+.breadcrumb__more:hover { background: var(--g-100); }
+@media (max-width: 640px) {
+  .breadcrumb__item { display: none; }
+  .breadcrumb__item:nth-last-child(2) { display: inline-flex; }
+  .breadcrumb__item:nth-last-child(2)::before { content: none; }
+  .breadcrumb__item:nth-last-child(2) .breadcrumb__link { display: inline-flex; align-items: center; gap: 4px; min-height: var(--h-touch); text-decoration: none; font-weight: 600; color: var(--g-800); }
+  .breadcrumb__item:nth-last-child(2) .breadcrumb__link::before {
+    content: "";
+    width: 20px;
+    height: 20px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.5 4.5L7 10l5.5 5.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+}
+
+/* ---- 描述清單（欄位：值）：詳情頁唯讀欄位、送出前確認內容 ----
+   <dl class="desc-list desc-list--2col">
+     <div class="desc-list__item"><dt class="desc-list__term">訂單編號</dt><dd class="desc-list__value">S2610-0042</dd></div>
+     <div class="desc-list__item"><dt class="desc-list__term">備註</dt><dd class="desc-list__value"></dd></div>  ← 空值自動顯示「—」
+   </dl>
+   單欄：欄位名 120 寬在左、值在右；--2col：641 起兩欄並排；≤640 欄位名在上、值在下 */
+.desc-list { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 32px; margin: 0; }
+.desc-list__item { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; align-items: baseline; column-gap: 16px; padding: 12px 0; }
+.desc-list__term { font-size: var(--fs-sub); line-height: 24px; font-weight: 500; color: var(--g-500); }
+.desc-list__value { margin: 0; font-size: 16px; line-height: 26px; font-weight: 500; color: var(--g-900); overflow-wrap: anywhere; }
+.desc-list__value:empty::before { content: "—"; content: "—" / "未提供"; color: var(--g-500); font-weight: 400; }
+.desc-list__action { justify-self: end; }
+.desc-list__action.text-btn { min-height: 32px; }
+.desc-list__item--full { grid-column: 1 / -1; }
+.desc-list--lined .desc-list__item + .desc-list__item { border-top: 1px solid var(--line); }
+@media (min-width: 641px) {
+  .desc-list--2col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desc-list--2col.desc-list--lined .desc-list__item:nth-child(2) { border-top: none; }
+}
+@media (max-width: 640px) {
+  .desc-list__item { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+  .desc-list__term { grid-column: 1 / -1; }
+}
+.desc-list--stacked .desc-list__item { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+.desc-list--stacked .desc-list__term { grid-column: 1 / -1; }
+
+/* ---- 統計數字卡：標籤＋大數字＋（可省略）比較上期；儀表板與列表頁頂部，桌機 4 欄 → <1100 兩欄 → ≤640 一欄 ----
+   <div class="stat-cards">
+     <div class="stat-card"><p class="stat-card__label">本月訂單</p><p class="stat-card__value">1,284<span class="stat-card__unit">筆</span></p><p class="stat-card__delta">較上月 ↑ 12%</p></div>
+   </div>
+   可選取版本：<div class="stat-cards" data-wf-select="single"><button type="button" class="stat-card stat-card--selectable" aria-pressed="false">…</button></div>
+   點了套用一個篩選，再點一次取消；選中＝深色 2px 框＋淡灰底＋標籤加粗。漲跌只用箭頭與文字，不用顏色 */
+.stat-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--web-card-gap, 16px); }
+@media (max-width: 1099px) { .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .stat-cards { grid-template-columns: minmax(0, 1fr); } }
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: var(--web-pad-card, 16px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  font: inherit;
+  color: var(--g-900);
+  text-align: left;
+}
+.stat-card__label { font-size: var(--fs-sub); line-height: 24px; font-weight: 500; color: var(--g-600); }
+.stat-card__value { font-size: 28px; line-height: 40px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-card__unit { margin-left: 4px; font-size: 16px; font-weight: 600; color: var(--g-600); }
+.stat-card__delta { font-size: var(--fs-sub); line-height: 24px; color: var(--g-600); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .stat-card__value { font-size: 24px; line-height: 36px; } }
+.stat-card--selectable { border-color: var(--line-strong); box-shadow: var(--shadow-card); cursor: pointer; transition: box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.stat-card--selectable:hover { border-color: var(--g-600); box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+.stat-card--selectable[aria-pressed="true"] { border-color: var(--g-800); box-shadow: inset 0 0 0 1px var(--g-800), var(--shadow-card); background: var(--g-50); }
+@media (hover: none) { .stat-card--selectable:hover { box-shadow: var(--shadow-card); transform: none; } }
+@media (prefers-reduced-motion: reduce) { .stat-card--selectable { transition: none; } .stat-card--selectable:hover { transform: none; } }
+.stat-card--selectable[aria-pressed="true"] .stat-card__label { color: var(--g-900); font-weight: 600; }
+/* 手機寬維持兩欄（.stat-cards--2up）：數字短、要一眼比較時用；卡片內距 12、數字 20 */
+@media (max-width: 640px) {
+  .stat-cards--2up { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-cards--2up .stat-card { padding: 12px; }
+  .stat-cards--2up .stat-card__value { font-size: 20px; line-height: 28px; }
+  .stat-cards--2up .stat-card__unit { font-size: var(--fs-sub); }
+}
+
+/* ---- 結果頁：重要操作完成、沒有權限、找不到頁面；沿用原頁頁首，只換內容區，內容垂直置中 ----
+   <div class="result result--success result--fill">
+     <div class="result__icon" aria-hidden="true"></div>
+     <h1 class="result__title">訂單已建立</h1><p class="result__desc">…</p>
+     <div class="result__acts"><a class="btn btn--primary">查看訂單</a><a class="btn btn--secondary">回到列表</a></div>
+   </div> */
+.result { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 560px; margin: 0 auto; padding: 48px 0; text-align: center; }
+.result--fill { min-height: 480px; justify-content: center; }
+.result__icon { width: 64px; height: 64px; margin-bottom: 8px; border-radius: 50%; background: var(--g-100) center / 32px no-repeat; }
+.result--success .result__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%232c2c2c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 16.5l5.5 5.5L24 11'/%3E%3C/svg%3E"); }
+.result--forbidden .result__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%232c2c2c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='14' width='16' height='12' rx='3'/%3E%3Cpath d='M11.5 14v-3.5a4.5 4.5 0 019 0V14'/%3E%3C/svg%3E"); }
+.result--not-found .result__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%232c2c2c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='14' cy='14' r='7.5'/%3E%3Cpath d='M19.5 19.5L26 26'/%3E%3C/svg%3E"); }
+.result__title { margin: 0; }
+.result__desc { font-size: 16px; line-height: 26px; color: var(--g-600); }
+.result__meta { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); font-variant-numeric: tabular-nums; }
+.result__acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 16px; }
+.result__extra { width: 100%; margin-top: 16px; text-align: left; }
+@media (max-width: 640px) {
+  .result { padding: 32px 0; }
+  .result__acts { flex-direction: column; align-self: stretch; }
+  .result__acts .btn { width: 100%; }
+}
+
+/* ---- 通知橫幅：頁面層級的持續訊息（系統維護、匯入完成、權限即將到期、同步失敗） ----
+   <div class="banner banner--warning" role="status">
+     <span class="banner__icon" aria-hidden="true"></span>
+     <div class="banner__body"><p class="banner__title">今晚 23:00 系統維護</p><p class="banner__desc">…</p></div>
+     <button type="button" class="banner__close" aria-label="關閉通知" data-wf-dismiss></button>
+   </div>
+   四種一律淺灰底、無外框，靠「圖示形狀＋標題用詞」區分；只有錯誤把圖示與標題轉紅。
+   可關閉＝右上 ×（data-wf-dismiss）；不可關閉＝不放 ×（使用者必須處理或狀態結束才消失）。
+   滿版：.banner--full，內容包一層 .banner__inner 對齊版心 */
+.banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--radius); background: var(--g-100); color: var(--g-900); }
+.banner--info { background: var(--g-100); } /* 資訊：預設樣式，圖示為圓圈 i */
+.banner__inner { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
+.banner__icon { flex: none; width: 20px; height: 20px; margin-top: 2px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3Cpath d='M10 9v5M10 6.2v.1'/%3E%3C/svg%3E") center / contain no-repeat; }
+.banner--success .banner__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3Cpath d='M6.5 10.2l2.4 2.4 4.6-4.8'/%3E%3C/svg%3E"); }
+.banner--warning .banner__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 2.8l8 14H2z'/%3E%3Cpath d='M10 8v4M10 14.4v.1'/%3E%3C/svg%3E"); }
+.banner--error .banner__icon { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23d32f2f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10' cy='10' r='8'/%3E%3Cpath d='M7.5 7.5l5 5M12.5 7.5l-5 5'/%3E%3C/svg%3E"); }
+.banner__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.banner__title { font-size: 15px; line-height: 24px; font-weight: 600; }
+.banner--error .banner__title { color: var(--wf-color-error); }
+.banner__desc { font-size: var(--fs-sub); line-height: 24px; color: var(--g-700); }
+.banner__acts { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 4px; }
+.banner__acts .text-btn { min-height: 32px; color: var(--g-800); }
+.banner__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: -4px -8px -4px 0;
+  border: none;
+  border-radius: 8px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4 4l8 8M12 4l-8 8'/%3E%3C/svg%3E") center / 16px no-repeat;
+  cursor: pointer;
+}
+.banner__close:hover { background-color: var(--g-200); }
+@media (max-width: 640px) { .banner__close { width: var(--h-touch); height: var(--h-touch); margin: -10px -14px -10px 0; } }
+.banner--full { display: block; padding: 0; border-radius: 0; border-bottom: 1px solid var(--line); }
+.banner--full > .banner__inner { max-width: calc(var(--web-max, 1200px) + 2 * var(--web-x, 20px)); margin: 0 auto; padding: 12px var(--web-x, 20px); }
+
+/* ---- 提示泡泡（tooltip）：一句話說明圖示按鈕，滑鼠停留或鍵盤聚焦才出現 ----
+   <button class="icon-btn" aria-label="匯出" data-wf-tooltip="匯出目前篩選結果">…</button>
+   不放可點的東西、不放重要資訊（重要資訊直接寫在畫面上）；觸控裝置不顯示 */
+.tooltip {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  max-width: 240px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--g-800);
+  color: var(--g-0);
+  font-size: var(--fs-sub);
+  line-height: 24px;
+  pointer-events: none;
+  animation: wf-fade-in 120ms var(--ease-out);
+}
+body > .tooltip { position: fixed; }
+@media (hover: none) { .tooltip { display: none !important; } }
+
+/* ================= 3d Web 表單與浮層（雙欄表單、日期與區間、組合框與多選、拖放上傳、浮層、右側編輯抽屜） =================
+   行為由 proto.js 提供（data-wf-datepicker、data-wf-combobox、data-wf-upload、data-wf-popover、data-wf-open-edit…） */
+
+/* ---- 雙欄表單：欄位群組（fieldset）分段；641 起兩欄、≤640 一欄；長表單左側段落導覽（≥1100） ----
+   <form class="form form--web" id="profile" novalidate>
+     <fieldset class="form-section"><legend class="form-section__title">基本資料</legend>
+       <div class="form-grid"><div class="field">…</div><div class="field field--full">…</div></div></fieldset>
+     <div class="form-actions"><p class="notice notice--error" data-wf-form-error role="alert" hidden></p>
+       <div class="form-actions__btns"><button class="btn btn--secondary">取消</button><button type="submit" class="btn btn--primary">儲存</button></div></div>
+   </form> */
+.form--web { gap: 40px; }
+.form-section { display: flex; flex-direction: column; gap: 16px; min-width: 0; margin: 0; padding: 0; border: none; }
+.form-section + .form-section { padding-top: 40px; border-top: 1px solid var(--line); }
+.form-section__title { float: left; width: 100%; padding: 0; font-size: 20px; line-height: 30px; font-weight: 700; } /* float：讓 legend 跟其他子元素一樣排在 flex 裡 */
+.form-section__title + * { clear: both; }
+.form-section__desc { margin-top: -12px; font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+.form-section { scroll-margin-top: 88px; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px 24px; }
+@media (min-width: 641px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field--full { grid-column: 1 / -1; }
+/* 送出列：按鈕靠右；表單層級錯誤一句紅字在按鈕正上方、左右置中 */
+.form-actions { display: flex; flex-direction: column; gap: 12px; padding-top: 24px; border-top: 1px solid var(--line); }
+.form-actions > .notice--error { text-align: center; }
+.form-actions__btns { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 640px) { .form-actions__btns { flex-direction: column-reverse; } .form-actions__btns .btn { width: 100%; } }
+/* 長表單段落導覽：≥1100 固定在左側，捲到哪一段就標成目前段落 */
+.form-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.form-index { display: none; }
+@media (min-width: 1100px) {
+  .form-layout { grid-template-columns: 200px minmax(0, 1fr); }
+  .form-index { display: block; position: sticky; top: 88px; align-self: start; }
+}
+.form-index__list { list-style: none; display: flex; flex-direction: column; gap: 4px; border-left: 2px solid var(--line); }
+.form-index__link { display: flex; align-items: center; min-height: 36px; margin-left: -2px; padding: 0 12px; border-left: 2px solid transparent; font-size: var(--fs-sub); color: var(--g-600); text-decoration: none; }
+.form-index__link:hover { color: var(--g-900); }
+.form-index__link[aria-current="true"] { border-left-color: var(--g-900); color: var(--g-900); font-weight: 600; }
+
+/* ---- 日期欄位與日曆：單一日期可直接打字（YYYY/MM/DD）或點日曆鈕；日期區間點欄位開日曆（含快捷區間） ----
+   <div class="date-field" data-wf-datepicker="single" data-wf-today="2026/10/15">
+     <div class="date-field__control"><input class="date-field__input" id="d1" placeholder="YYYY/MM/DD" />
+       <button type="button" class="date-field__btn" aria-label="開啟日曆">…</button></div></div>
+   <div class="date-field date-field--range" data-wf-datepicker="range"><button type="button" class="date-field__trigger">…</button></div> */
+.date-field { position: relative; }
+.date-field--range { display: block; } /* 區間：整個欄位是一顆按鈕（.date-field__trigger） */
+.date-field__control, .date-field__trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  font: inherit;
+  font-size: 15px;
+  color: var(--g-900);
+}
+.date-field__control { padding: 0 4px 0 16px; }
+.date-field__control:focus-within { border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.date-field__input { flex: 1; min-width: 0; height: 100%; border: none; background: none; font: inherit; font-weight: 500; color: inherit; outline: none; font-variant-numeric: tabular-nums; }
+.date-field__input::placeholder { color: var(--g-400); font-weight: 400; }
+.date-field__btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: none; border-radius: 8px; background: none; color: var(--g-700); cursor: pointer; }
+.date-field__btn:hover { background: var(--g-100); }
+.date-field svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.date-field__trigger { padding: 0 16px; text-align: left; cursor: pointer; }
+.date-field__trigger:focus-visible { outline-offset: 0; }
+.date-field__text { flex: 1; min-width: 0; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.date-field__text.is-placeholder { color: var(--g-400); font-weight: 400; }
+.field.is-error .date-field__control, .field.is-error .date-field__trigger { border: 1.5px solid var(--wf-color-error); }
+/* 日曆浮層：貼在欄位下方 4px；區間在 641 起並排兩個月 */
+.calendar-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--z-popmenu);
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+}
+.calendar-pop.is-right { left: auto; right: 0; }
+.calendar-pop__body { display: flex; gap: 24px; }
+.calendar-pop__presets { list-style: none; display: flex; flex-direction: column; gap: 4px; min-width: 112px; padding-right: 16px; border-right: 1px solid var(--line); }
+.calendar-pop__preset { width: 100%; min-height: 36px; padding: 0 12px; border: none; border-radius: 8px; background: none; font: inherit; font-size: var(--fs-sub); color: var(--g-700); text-align: left; white-space: nowrap; cursor: pointer; }
+.calendar-pop__preset:hover { background: var(--g-100); }
+.calendar-pop__months { display: flex; gap: 24px; }
+.calendar-pop__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: var(--fs-sub); color: var(--g-600); font-variant-numeric: tabular-nums; }
+.calendar-pop__foot .text-btn { min-height: 32px; }
+@media (max-width: 640px) {
+  .calendar-pop { position: fixed; top: auto; left: 0; right: 0; bottom: 0; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; padding: 16px 20px 24px; }
+  .calendar-pop__body { flex-direction: column; gap: 12px; }
+  .calendar-pop__presets { flex-direction: row; flex-wrap: wrap; padding: 0 0 12px; border-right: none; border-bottom: 1px solid var(--line); }
+  .calendar-pop__preset { width: auto; border: 1px solid var(--line-soft); border-radius: var(--radius-pill); }
+  .calendar { margin: 0 auto; }
+}
+.calendar { width: 280px; }
+.calendar__head { display: flex; align-items: center; justify-content: space-between; height: 40px; margin-bottom: 4px; }
+.calendar__title { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.calendar__nav { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; border-radius: 8px; background: none; color: var(--g-700); cursor: pointer; }
+.calendar__nav:hover { background: var(--g-100); }
+.calendar__nav svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.calendar__nav.is-ghost { visibility: hidden; }
+.calendar__grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.calendar__grid th { height: 32px; padding: 0; font-size: var(--fs-sub); font-weight: 500; color: var(--g-500); text-align: center; }
+.calendar__grid td { height: 40px; padding: 0; text-align: center; }
+.calendar__day {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 500;
+  color: var(--g-900);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.calendar__day:hover { background: var(--g-100); }
+.calendar__day:focus-visible { outline-offset: -2px; }
+.calendar__day.is-today { box-shadow: inset 0 0 0 1px var(--g-500); font-weight: 700; }
+.calendar__day.is-range, .calendar__day.is-preview { border-radius: 0; background: var(--g-150); }
+.calendar__day[aria-pressed="true"] { border-radius: 8px; background: var(--g-800); color: var(--g-0); font-weight: 700; }
+.calendar__day:disabled { background: none; color: var(--g-400); text-decoration: line-through; cursor: not-allowed; }
+
+/* ---- 組合框（自動完成）與多選：打字篩選選項；多選的已選項目變成標籤，放在輸入框前面 ----
+   <div class="combobox" data-wf-combobox="multi">
+     <div class="combobox__field"><ul class="combobox__tags"></ul>
+       <input class="combobox__input" id="c1" role="combobox" aria-controls="c1-list" />
+       <button type="button" class="combobox__clear" aria-label="清除全部" hidden></button></div>
+     <div class="combobox__popup" hidden><ul class="combobox__list" id="c1-list" role="listbox">
+       <li class="combobox__option" role="option" data-value="t1">王小明</li></ul>
+       <p class="combobox__empty" hidden></p></div>
+   </div>
+   焦點一直留在輸入框，選項用 aria-activedescendant 指出目前項目；查無結果時清單位置顯示一句話 */
+.combobox { position: relative; }
+.combobox__field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 44px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  cursor: text;
+}
+.combobox__field:focus-within { border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.field.is-error .combobox__field { border: 1.5px solid var(--wf-color-error); }
+.combobox__tags { display: contents; list-style: none; }
+.combobox__input { flex: 1 1 120px; min-width: 120px; height: 34px; padding: 0 4px; border: none; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--g-900); outline: none; }
+.combobox__input::placeholder { color: var(--g-400); font-weight: 400; }
+.combobox__clear {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border: none;
+  border-radius: 8px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='%23aeaeae'/%3E%3Cpath d='M9 9l6 6M15 9l-6 6' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / 18px no-repeat;
+  cursor: pointer;
+}
+.combobox__popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-popmenu);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 0;
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+}
+.combobox__list { list-style: none; }
+.combobox__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--h-touch);
+  padding: 0 16px;
+  font-size: 15px;
+  color: var(--g-900);
+  cursor: pointer;
+}
+.combobox__option:hover { background: var(--g-50); }
+.combobox__option.is-active { background: var(--g-100); box-shadow: inset 0 0 0 2px var(--g-800); } /* 鍵盤目前指到的項目（焦點仍在輸入框） */
+.combobox__option-sub { font-size: var(--fs-sub); color: var(--g-500); }
+.combobox__option[aria-selected="true"] { font-weight: 600; }
+.combobox__option[aria-selected="true"]::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  flex: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c2c2c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.combobox__empty { padding: 12px 16px; font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+
+/* ---- 拖放上傳：拖放區＋「選擇檔案」按鈕（鍵盤與讀屏的入口）＋限制說明＋檔案清單（上傳中進度、失敗重試、移除） ----
+   <div class="upload" data-wf-upload data-wf-accept=".jpg,.png,.pdf" data-wf-max-size="10" data-wf-max-files="5">
+     <div class="upload__zone"><span class="upload__icon" aria-hidden="true"></span>
+       <p class="upload__title">把檔案拖到這裡，或</p>
+       <button type="button" class="btn btn--secondary btn--sm upload__pick">選擇檔案</button>
+       <p class="upload__hint">支援 JPG、PNG、PDF，單檔 10 MB 以內，最多 5 個</p>
+       <input type="file" class="upload__input" multiple hidden /></div>
+     <ul class="upload__list"></ul>
+   </div> */
+.upload { display: flex; flex-direction: column; gap: 12px; }
+.upload__zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 24px;
+  border: 1.5px dashed var(--g-400);
+  border-radius: var(--radius-card);
+  background: var(--g-25);
+  text-align: center;
+  transition: background 120ms, border-color 120ms;
+}
+.upload__zone.is-dragover { border-style: solid; border-color: var(--g-800); background: var(--g-100); }
+.upload__icon { width: 40px; height: 40px; border-radius: 50%; background: var(--g-150) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V5M7 10l5-5 5 5M5 19h14'/%3E%3C/svg%3E") center / 20px no-repeat; }
+.upload__title { font-size: 15px; font-weight: 600; }
+.upload__hint { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+.upload__zone .field__error { margin-top: 4px; }
+.upload__list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.upload__item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 4px; padding: 12px 8px 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.upload__thumb { grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 8px; background: var(--g-150); }
+.upload__name { min-width: 0; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload__meta { grid-column: 2; font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); font-variant-numeric: tabular-nums; }
+.upload__item.is-error .upload__meta { color: var(--wf-color-error); font-weight: 500; }
+.upload__bar { grid-column: 2 / -1; height: 4px; border-radius: var(--radius-pill); background: var(--g-150); overflow: hidden; }
+.upload__bar > i { display: block; height: 100%; width: 0; border-radius: var(--radius-pill); background: var(--g-800); transition: width 120ms linear; }
+.upload__acts { grid-column: 3; grid-row: 1 / span 2; display: flex; align-items: center; gap: 4px; }
+.upload__acts .text-btn { min-height: 32px; padding: 0 8px; color: var(--g-800); }
+.upload__remove { width: 32px; height: 32px; border: none; border-radius: 8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4 4l8 8M12 4l-8 8'/%3E%3C/svg%3E") center / 14px no-repeat; cursor: pointer; }
+.upload__remove:hover { background-color: var(--g-100); }
+@media (max-width: 640px) {
+  .upload__zone { padding: 24px 16px; }
+  .upload__drag-text { display: none; } /* 手機不能拖放，只留「選擇檔案」 */
+  .upload__remove { width: var(--h-touch); height: var(--h-touch); }
+}
+
+/* ---- 浮層（popover）：點按鈕開的小面板（欄位顯示、快速設定）；可放連結、勾選、小表單；不壓遮罩，點外面、Esc 關閉 ----
+   <button type="button" class="btn btn--secondary btn--sm" aria-haspopup="dialog" aria-expanded="false" data-wf-popover-open="cols">欄位顯示</button>
+   <div class="popover" id="cols" role="dialog" aria-label="欄位顯示" data-wf-popover hidden>…</div> */
+.popover {
+  position: absolute;
+  z-index: var(--z-popmenu);
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: wf-fade-in 120ms var(--ease-out);
+}
+body > .popover { position: fixed; }
+.popover__title { font-size: 15px; font-weight: 600; }
+.popover__desc { font-size: var(--fs-sub); line-height: 24px; color: var(--g-600); }
+.popover .choices .check { min-height: var(--h-touch); padding: 8px 0; }
+.popover__foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* ---- 右側編輯抽屜：不離開列表就編輯一筆資料；寬 480（--wide 720），≤640 滿寬 ----
+   <div class="edit-drawer-layer" id="edit-1" hidden>
+     <form class="edit-drawer" role="dialog" aria-modal="true" aria-labelledby="edit-1-t" novalidate>
+       <div class="edit-drawer__head"><h2 class="edit-drawer__title" id="edit-1-t">編輯課程</h2><button type="button" class="icon-btn" aria-label="關閉" data-wf-close>…</button></div>
+       <div class="edit-drawer__body">…</div>
+       <div class="edit-drawer__foot"><p class="notice notice--error" data-wf-form-error role="alert" hidden></p>
+         <div class="edit-drawer__acts"><button type="button" class="btn btn--secondary" data-wf-close>取消</button><button type="submit" class="btn btn--primary">儲存</button></div></div>
+     </form>
+   </div>
+   開啟時焦點到第一個欄位；改過內容後按 ×、取消、Esc、點遮罩，先問「要放棄修改嗎？」 */
+.edit-drawer-layer { position: fixed; inset: 0; z-index: var(--z-drawer); background: rgba(0, 0, 0, 0); transition: background var(--dur-overlay) var(--ease-out); }
+.edit-drawer-layer.is-open { background: var(--scrim); }
+.edit-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--g-0);
+  box-shadow: var(--shadow-float);
+  transform: translateX(100%);
+  transition: transform var(--dur-overlay) var(--ease-out);
+}
+.edit-drawer--wide { width: 720px; }
+.edit-drawer-layer.is-open .edit-drawer { transform: none; }
+.edit-drawer__head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 0 12px 0 24px; border-bottom: 1px solid var(--line); }
+.site .edit-drawer__title, .edit-drawer__title { margin: 0; font-size: 20px; line-height: 30px; font-weight: 700; }
+.edit-drawer__body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 24px; }
+.edit-drawer__foot { flex: none; display: flex; flex-direction: column; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--g-0); }
+.edit-drawer__foot > .notice--error { text-align: center; }
+.edit-drawer__acts { display: flex; justify-content: flex-end; gap: 8px; }
+.edit-drawer .input, .edit-drawer .select, .edit-drawer .input-group { height: 44px; }
+@media (max-width: 640px) {
+  .edit-drawer, .edit-drawer--wide { width: 100%; }
+  .edit-drawer__head { padding-left: 20px; }
+  .edit-drawer__body { padding: 20px; }
+  .edit-drawer__foot { padding: 12px 20px 20px; }
+  /* 手機：兩顆＝並排各半；三顆＝主按鈕滿寬獨佔最下一列，其他兩顆在上方並排 */
+  .edit-drawer__acts { flex-wrap: wrap; }
+  .edit-drawer__acts .btn { flex: 1 1 0; }
+  .edit-drawer__acts:has(> .btn:nth-child(3)) > .btn--primary { flex-basis: 100%; order: 1; }
+}
+
+/* ================= 3e Web 後台第三批（標題列與白底區塊、角色檢視、多值與範圍篩選、統計卡連動、列上次要動作、收藏欄、狀態下拉、編輯紀錄、日期加時間、雙層側欄） =================
+   行為由 proto.js 提供（data-wf-roles、data-wf-filter-multi、data-wf-filter-range、data-wf-stat-filter、data-wf-fav、
+   data-wf-status-flow、data-wf-audit、data-wf-datepicker="datetime"、data-wf-sidenav-panel…） */
+
+/* ---- 後台內容區：頁首標題列滿版（白底＋底線），內容放白底區塊，表單頁加最大寬 720 ----
+   <main class="admin__main">
+     <div class="admin-titlebar"><div class="container admin-titlebar__inner">麵包屑＋.admin-head</div></div>
+     <div class="container admin__body">
+       <section class="admin-block"><div class="admin-block__head"><h2 class="admin-block__title">…</h2></div>…</section>
+       <div class="admin__narrow">表單頁內容（最大寬 720）</div>
+     </div>
+   </main>
+   內容底色淺灰（#f7f7f7），區塊白底＋1px 淺灰框＋圓角 12、內距 20（手機 16）；資料表格本身就是白底區塊 */
+.site--admin .admin__main { align-self: stretch; background: var(--g-50); }
+.admin-titlebar { background: var(--g-0); border-bottom: 1px solid var(--line); }
+.admin-titlebar__inner { display: flex; flex-direction: column; gap: 8px; padding-top: 20px; padding-bottom: 20px; }
+@media (max-width: 640px) { .admin-titlebar__inner { padding-top: 12px; padding-bottom: 16px; } }
+.admin-block { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: var(--web-pad-card, 16px); border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--g-0); }
+.admin-block__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.site .admin-block__title { margin: 0; font-size: 18px; line-height: 28px; font-weight: 700; }
+.admin-block__desc { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+.admin__narrow { display: flex; flex-direction: column; gap: 24px; width: 100%; max-width: 720px; margin: 0 auto; } /* 表單頁、設定頁：最大寬 720 置中；行事曆等格線主體不包它 */
+/* 標題列兼工具列：整天開著的行事曆、排班、工時工具；一列排完——左端日期標題或門市名稱（h1）、中間日期導覽與檢視切換、主動作最右
+   <div class="admin-titlebar admin-titlebar--toolbar"><div class="container admin-titlebar__inner">
+     <h1>10 月 20 日（一）</h1>
+     <div class="admin-titlebar__tools">今天＋‹ ›＋.seg 檢視切換</div>
+     <button type="button" class="btn btn--primary">新增預約</button>
+   </div></div> */
+.admin-titlebar--toolbar .admin-titlebar__inner { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding-top: 12px; padding-bottom: 12px; }
+.site .admin-titlebar--toolbar h1 { margin: 0; font-size: 20px; line-height: 30px; }
+.admin-titlebar__tools { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.site .admin-titlebar--toolbar .btn { height: 40px; padding: 0 16px; font-size: 15px; }
+@media (max-width: 640px) { .site .admin-titlebar--toolbar .btn { height: var(--h-touch); } }
+.admin__narrow .form-actions__btns .btn { height: 44px; } /* 表單送出等主要動作維持 44 */
+
+/* ---- 角色檢視：data-wf-roles="主管,編輯"＝只有這些角色看得到（沒寫＝所有角色都看得到）。
+   目前角色看不到的元素，proto.js 加上 data-wf-role-hidden；切換角色即時重畫 ---- */
+[data-wf-role-hidden] { display: none !important; }
+
+/* ---- 篩選列：多值篩選（data-wf-filter-multi）——選項前一個勾選框，可複選、清單不關 ---- */
+.filter-select__menu[aria-multiselectable="true"] .filter-select__option { justify-content: flex-start; }
+.filter-select__menu[aria-multiselectable="true"] .filter-select__option::before {
+  content: "";
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--g-0) center / 14px no-repeat;
+}
+.filter-select__menu[aria-multiselectable="true"] .filter-select__option[aria-selected="true"]::before {
+  border-color: var(--g-800);
+  background-color: var(--g-800);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.filter-select__menu[aria-multiselectable="true"] .filter-select__option[aria-selected="true"]::after { content: none; }
+/* 一個選項代表多個值（data-value="待付款|待出貨|處理中"，例：「未結案」）：右側小字列出包含哪些值 */
+.filter-select__option-sub { margin-left: auto; padding-left: 12px; font-size: var(--fs-sub); font-weight: 400; color: var(--g-500); }
+.filter-select__sep { height: 1px; margin: 4px 0; background: var(--line); }
+
+/* ---- 篩選列：範圍篩選（.filter-range）——數值區間開小面板填最低／最高；日期區間沿用日期區間選擇 ---- */
+.filter-range { position: relative; }
+.filter-range__panel { width: 300px; }
+.filter-range__inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 8px; }
+.filter-range__sep { line-height: 44px; color: var(--g-500); }
+.filter-range__panel .input { height: 44px; }
+.filter-range__panel .field.is-error .input { border: 1.5px solid var(--wf-color-error); }
+.filter-range__foot { justify-content: space-between; align-items: center; }
+.filter-range__foot .text-btn { min-height: 32px; }
+.filter-range .date-field__trigger { width: auto; padding: 0 12px 0 16px; border-color: var(--line-strong); font-size: 15px; color: var(--g-700); }
+.filter-range .date-field__trigger > svg { display: none; }
+.filter-range .date-field__text { flex: none; }
+.filter-range .date-field__text.is-placeholder { color: var(--g-500); font-weight: 400; }
+.filter-range.is-active .date-field__trigger { border-color: var(--g-800); box-shadow: inset 0 0 0 1px var(--g-800); }
+.filter-range.is-active .date-field__text { color: var(--g-900); font-weight: 600; }
+
+/* ---- 資料表格：列上次要動作（⋯）——有滑鼠的寬螢幕，滑過或聚焦該列才顯示；觸控裝置與手機寬一律顯示 ---- */
+@media (hover: hover) and (pointer: fine) and (min-width: 641px) {
+  .data-table tbody tr .table__actions .icon-btn--more { opacity: 0; transition: opacity 120ms; }
+  .data-table tbody tr:hover .table__actions .icon-btn--more,
+  .data-table tbody tr:focus-within .table__actions .icon-btn--more,
+  .data-table .table__actions .icon-btn--more[aria-expanded="true"] { opacity: 1; }
+}
+/* 沒有批次動作（表格裡沒有 .bulk-bar）時不顯示勾選欄：proto.js 自動加 .data-table--no-select */
+.data-table--no-select .table__check { display: none !important; }
+/* 收藏欄（選配）：星號按鈕，aria-pressed 表示已收藏；未收藏＝空心、已收藏＝實心 */
+.table__fav { width: 52px; padding-right: 0 !important; }
+.fav-btn {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  margin: -4px 0 -4px -6px;
+  border: none;
+  border-radius: 8px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23767676' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z'/%3E%3C/svg%3E") center / 20px no-repeat;
+  cursor: pointer;
+}
+.fav-btn:hover { background-color: var(--g-100); }
+.fav-btn[aria-pressed="true"] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232c2c2c' stroke='%232c2c2c' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z'/%3E%3C/svg%3E"); }
+@media (max-width: 640px) {
+  .table--stack tbody tr { position: relative; }
+  .table--stack tbody td.table__fav { position: absolute; top: 4px; right: 4px; display: block; width: auto; padding: 0 !important; }
+  .table--stack tbody td.table__fav::before { content: none; }
+  .table--stack .fav-btn { width: var(--h-touch); height: var(--h-touch); margin: 0; }
+  .table--stack thead th.table__fav { display: none; }
+}
+
+/* ---- 狀態下拉：依「狀態轉換表」只列出可前往的狀態；需要補資料的轉換當下跳對話框 ----
+   <div class="status-select" data-wf-status="待出貨" data-wf-status-flow="待付款>待出貨,已取消; 待出貨>已出貨,已取消">
+     <button type="button" class="status-select__btn" aria-haspopup="listbox" aria-expanded="false"></button>
+     <ul class="filter-select__menu status-select__menu" role="listbox" aria-label="改為" hidden></ul>
+   </div>
+   按鈕與選項由 proto.js 產生；沒有可前往的狀態＝按鈕停用並寫「已是最終狀態」 */
+.status-select { position: relative; display: inline-flex; }
+.status-select__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--g-0);
+  font: inherit;
+  font-size: var(--fs-sub);
+  color: var(--g-900);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.status-select__btn::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 160ms var(--ease-out);
+}
+.status-select__btn[aria-expanded="true"]::after { transform: rotate(180deg); }
+.status-select__btn:hover { border-color: var(--g-600); }
+.status-select__btn:disabled { padding-left: 0; border-color: transparent; background: none; color: var(--g-500); cursor: default; }
+.status-select__btn:disabled::after { content: none; }
+.status-select__hint { margin-left: 4px; font-size: var(--fs-sub); color: var(--g-500); }
+.status-select__menu { min-width: 180px; }
+.data-table .status-select__btn { height: 32px; }
+@media (max-width: 640px) { .status-select__btn, .data-table .status-select__btn { height: var(--h-touch); } }
+
+/* ---- 編輯紀錄（「編輯紀錄」分頁）：每筆＝時間、人、改了哪個欄位、原值 → 新值；新的在最上面 ----
+   <ol class="audit-log" id="…" data-wf-audit>
+     <li class="audit-log__item"><time class="audit-log__time">2026/10/15 14:20</time><span class="audit-log__who">王小明（主管）</span>
+       <p class="audit-log__change"><span class="audit-log__field">狀態</span><span class="audit-log__from">待出貨</span>
+         <span class="audit-log__arrow" aria-hidden="true"></span><span class="visually-hidden">改為</span><span class="audit-log__to">已出貨</span></p></li>
+   </ol>
+   原值或新值留空＝顯示「—」；清單沒有任何一筆＝顯示「還沒有編輯紀錄」 */
+.audit-log { list-style: none; display: flex; flex-direction: column; }
+.audit-log__item { display: grid; grid-template-columns: 152px 136px minmax(0, 1fr); align-items: baseline; column-gap: 16px; row-gap: 4px; padding: 12px 0; }
+.audit-log__item + .audit-log__item { border-top: 1px solid var(--line); }
+.audit-log__time { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audit-log__who { min-width: 0; font-size: var(--fs-sub); line-height: 24px; font-weight: 600; color: var(--g-800); overflow-wrap: anywhere; }
+.audit-log__change { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; font-size: 15px; line-height: 24px; color: var(--g-900); }
+.audit-log__field { font-weight: 600; }
+.audit-log__field::after { content: "："; }
+.audit-log__from { color: var(--g-500); text-decoration: line-through; overflow-wrap: anywhere; }
+.audit-log__to { font-weight: 600; overflow-wrap: anywhere; }
+.audit-log__from:empty, .audit-log__to:empty { text-decoration: none; }
+.audit-log__from:empty::before, .audit-log__to:empty::before { content: "—"; content: "—" / "空白"; color: var(--g-500); font-weight: 400; }
+.audit-log__arrow { flex: none; width: 16px; height: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23767676' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4'/%3E%3C/svg%3E") center / contain no-repeat; }
+.audit-log__item.is-new { animation: wf-fade-in var(--dur-overlay) var(--ease-out); }
+.audit-log:empty::before { content: "還沒有編輯紀錄"; display: block; padding: 32px 0; text-align: center; font-size: var(--fs-sub); color: var(--g-500); }
+@media (max-width: 640px) {
+  .audit-log__item { grid-template-columns: auto minmax(0, 1fr); }
+  .audit-log__change { grid-column: 1 / -1; }
+}
+
+/* ---- 日期加時間：data-wf-datepicker="datetime"（單一日期＋時刻）；日期區間加 data-wf-time＝開始與結束各帶時刻 ----
+   日曆下方一列時間（時、分兩個下拉）；點日期不關閉，按「確定」才寫回欄位；Esc、點外面＝不變更 */
+.calendar-pop__time { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.time-pick { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sub); color: var(--g-700); }
+.time-pick__label { font-weight: 600; white-space: nowrap; }
+.time-pick__sep { color: var(--g-500); }
+.time-pick .select {
+  width: auto;
+  height: 36px;
+  padding: 0 28px 0 10px;
+  border-radius: 8px;
+  font-size: var(--fs-sub);
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--g-0) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 8px center / 14px no-repeat;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-pop__foot-acts { display: flex; align-items: center; gap: 12px; }
+.calendar-pop__status.is-error { color: var(--wf-color-error); font-weight: 600; }
+@media (max-width: 640px) { .time-pick .select { height: var(--h-touch); } }
+
+/* ---- 雙層側欄（.sidenav--dual）：第一層圖示欄（寬＝頂列 Logo 格 72）＋第二層選單 ----
+   <header class="admin-bar"><button class="icon-btn admin-bar__menu" data-wf-open-sidenav="sidenav">☰</button>
+     <span class="admin-bar__brand"><span class="admin-bar__mark" role="img" aria-label="網站標誌"></span></span>…</header>
+   <nav class="sidenav sidenav--dual" id="sidenav" data-wf-sidenav>
+     <div class="sidenav__rail"><button type="button" class="sidenav__rail-item" data-wf-sidenav-panel="p-ops">
+       <span class="sidenav__icon" aria-hidden="true"></span><span class="sidenav__rail-label">營運</span></button>…</div>
+     <div class="sidenav__panel" id="p-ops" aria-label="營運">
+       <div class="sidenav__panel-head"><p class="sidenav__panel-title">營運</p>
+         <button type="button" class="icon-btn sidenav__collapse" aria-label="收合選單" data-wf-sidenav-collapse>…</button>
+         <button type="button" class="icon-btn sidenav__panel-close" aria-label="關閉選單" data-wf-close>×</button></div>
+       <ul class="sidenav__list">…</ul></div>
+   </nav>
+   換頁時自動展開目前頁所在那一組的第二層；收合後只剩圖示欄、不顯示展開鈕，點第一層圖示即展開；
+   第二層帶「返回」（.sidenav__back）的內頁不提供收合。≤1099 由頂列選單鈕打開抽屜（兩層一起）。單層側欄維持頂列左側選單鈕 */
+.site--admin { --sidenav-rail-w: 72px; }
+.admin-bar__brand { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: center; width: var(--sidenav-rail-w); margin-left: calc(-1 * var(--web-x, 20px)); border-right: 1px solid var(--line); }
+.admin-bar__mark { width: 32px; height: 32px; border-radius: 8px; background: var(--g-300); }
+.sidenav--dual { width: auto; flex-direction: row; gap: 0; padding: 0; overflow: hidden; border-right: none; }
+.sidenav__rail { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: var(--sidenav-rail-w); padding: 12px 0; box-sizing: border-box; overflow-y: auto; border-right: 1px solid var(--line); background: var(--g-25); }
+.sidenav__rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 60px;
+  min-height: 60px;
+  padding: 6px 0;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sub);
+  line-height: 20px;
+  color: var(--g-700);
+  cursor: pointer;
+}
+.sidenav__rail-item:hover { background: var(--g-100); color: var(--g-900); }
+.sidenav__rail-item[aria-expanded="true"] { background: var(--g-100); color: var(--g-900); }
+.sidenav__rail-item[aria-current="true"] { background: var(--g-150); color: var(--g-900); font-weight: 600; }
+.sidenav__rail-item[aria-current="true"] .sidenav__icon { background: var(--g-700); }
+.sidenav__rail-label { white-space: nowrap; }
+.sidenav__panel { flex: none; display: flex; flex-direction: column; gap: 12px; width: 208px; padding: 12px; overflow-y: auto; border-right: 1px solid var(--line); background: var(--g-0); }
+.sidenav__panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--h-touch); padding-left: 12px; }
+.sidenav__panel-title { min-width: 0; font-size: var(--fs-btn); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidenav__panel-close { display: none; }
+.sidenav__back { display: flex; align-items: center; gap: 4px; min-height: var(--h-touch); padding: 0 12px 0 8px; border-radius: var(--radius); font-size: 15px; font-weight: 600; color: var(--g-800); text-decoration: none; }
+.sidenav__back::before { content: ""; width: 20px; height: 20px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23454545' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.5 4.5L7 10l5.5 5.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+.sidenav__back:hover { background: var(--g-100); }
+.sidenav__panel:has(.sidenav__back) .sidenav__collapse { display: none; } /* 帶返回的內頁不提供收合 */
+@media (min-width: 1100px) {
+  .sidenav--dual.is-collapsed { width: auto; }
+  .sidenav--dual.is-collapsed .sidenav__panel { display: none; }
+}
+@media (max-width: 1099px) {
+  .admin-bar__brand { width: auto; margin-left: 0; border-right: none; }
+  .sidenav--dual { width: 280px; }
+  .sidenav--dual .sidenav__panel { flex: 1; min-width: 0; width: auto; }
+  .sidenav--dual .sidenav__collapse { display: none; }
+  .sidenav--dual .sidenav__panel-close { display: inline-flex; }
+}
+
+/* ================= 3f Web 後台第四批（抽屜內頁籤、補資料抽屜、文字編輯器、關閉動態） =================
+   行為由 proto.js 提供（data-wf-status-drawer、data-wf-rte、網址 motion=0） */
+
+/* ---- 抽屜裡的頁籤：頁籤列不被壓扁、左右貼齊抽屜邊、切換的內容照常留內距 ----
+   <div class="edit-drawer__body">
+     <div class="tabs" role="tablist" data-wf-tabs>…</div>
+     <div id="p1" role="tabpanel" class="edit-drawer__panel">…</div>
+   </div> */
+.edit-drawer__body > .tabs { margin: -12px -24px 0; padding: 0 12px; }
+.edit-drawer__panel { display: flex; flex-direction: column; gap: 24px; }
+.edit-drawer__panel[hidden] { display: none; }
+@media (max-width: 640px) {
+  .edit-drawer__body > .tabs { margin: -8px -20px 0; padding: 0 8px; }
+}
+
+/* ---- 補資料抽屜（狀態下拉要填長文字或多個欄位時）：桌機、平板右側抽屜；手機 ≤640 改成底部面板 ----
+   <div class="edit-drawer-layer edit-drawer-layer--sheet" id="…" hidden>…</div>
+   （狀態下拉用 data-wf-status-drawer 開啟時 proto.js 自動加上 --sheet） */
+@media (max-width: 640px) {
+  .edit-drawer-layer--sheet .edit-drawer { top: auto; max-height: 88%; border-radius: 16px 16px 0 0; transform: translateY(100%); }
+  .edit-drawer-layer--sheet.is-open .edit-drawer { transform: none; }
+}
+
+/* ---- 文字編輯器（線框層級：只畫外觀與預設、聚焦、錯誤、停用四種狀態，不做真實排版） ----
+   <div class="field">
+     <label class="field__label" for="post-body">內文</label>
+     <div class="rte" data-wf-rte>
+       <div class="rte__toolbar" role="toolbar" aria-label="文字格式">
+         <button type="button" class="rte__tool" aria-label="標題">標題</button>
+         <button type="button" class="rte__tool" aria-label="粗體"><b>B</b></button>
+         <button type="button" class="rte__tool" aria-label="清單"><svg …/></button>
+         <span class="rte__sep" aria-hidden="true"></span>
+         <button type="button" class="rte__tool" aria-label="連結"><svg …/></button>
+         <button type="button" class="rte__tool" aria-label="圖片"><svg …/></button>
+       </div>
+       <textarea class="rte__area" id="post-body" maxlength="2000" placeholder="…"></textarea>
+       <div class="rte__foot"><span class="field__count" data-wf-rte-count>0／2000</span></div>
+     </div>
+   </div>
+   聚焦＝內容區聚焦時整個框加深；錯誤＝外層 .field.is-error；停用＝內容區 disabled（工具列跟著停用） */
+.rte { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--g-0); overflow: hidden; }
+.rte:focus-within { border-color: var(--g-800); box-shadow: 0 0 0 1px var(--g-800), 0 0 0 4px rgba(44, 44, 44, 0.08); }
+.field.is-error .rte { border-color: var(--wf-color-error); box-shadow: 0 0 0 1px var(--wf-color-error); }
+.rte__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 48px; padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--g-50); }
+.rte__tool {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-700);
+  font: inherit;
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  cursor: pointer;
+}
+.rte__tool b { font-size: 16px; font-weight: 800; }
+.rte__tool:hover { background: var(--g-150); color: var(--g-900); }
+.rte__tool svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rte__sep { width: 1px; height: 20px; margin: 0 4px; background: var(--line-strong); }
+.rte__area {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  padding: 12px var(--pad-control);
+  border: none;
+  outline: none;
+  resize: vertical;
+  background: none;
+  color: var(--g-900);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+.rte__area::placeholder { color: var(--g-400); }
+.rte__foot { display: flex; justify-content: flex-end; padding: 0 var(--pad-control) 10px; }
+.rte.is-disabled { background: var(--fill-control-disabled); border-color: var(--g-150); }
+.rte.is-disabled .rte__toolbar { background: var(--fill-control-disabled); }
+.rte__tool:disabled { background: none; color: var(--g-400); cursor: not-allowed; }
+.rte__area:disabled { color: var(--g-400); cursor: not-allowed; }
+
+/* ================= 3g Web 後台整頁表單與單筆詳情（固定儲存列、右側設定欄、活動時間軸、表單型對話框） =================
+   行為由 proto.js 提供（initForm 的 summary／submitBtn、data-wf-activity） */
+
+/* ---- 固定儲存列：Web 後台整頁表單的頁首，取代一般標題列；捲動時固定在頂列下方 ----
+   <div class="save-bar">
+     <div class="container save-bar__inner">
+       <nav class="breadcrumb">…</nav>（可省略）
+       <div class="save-bar__row">
+         <div class="save-bar__main"><h1 class="save-bar__title">新增課程</h1><span class="badge">草稿</span></div>
+         <div class="save-bar__side">
+           <p class="notice notice--error save-bar__error" id="…" data-wf-form-error role="alert" hidden></p>
+           <p class="save-bar__state">未儲存的變更</p>
+           <div class="save-bar__acts"><button class="btn btn--secondary">取消</button><button type="submit" form="表單 id" class="btn btn--primary">儲存</button></div>
+         </div>
+       </div>
+     </div>
+   </div>
+   ≥641：左＝標題＋狀態標籤，右＝錯誤數提示（或儲存狀態）＋取消＋主按鈕（最右）；按鈕高 40
+   ≤640：右半段改成固定在視窗底部的置底列，錯誤數提示置中在按鈕上方，按鈕高 44 */
+.save-bar { --save-bar-h: 104px; position: sticky; top: var(--admin-bar-h, 0px); z-index: calc(var(--z-sticky) - 1); background: var(--g-0); border-bottom: 1px solid var(--line); }
+.save-bar__inner { display: flex; flex-direction: column; gap: 4px; padding-top: 16px; padding-bottom: 16px; }
+.save-bar__row { display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 40px; }
+.save-bar__main { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.site .save-bar__title { margin: 0; font-size: 24px; line-height: 32px; font-weight: 700; }
+.save-bar__side { display: flex; align-items: center; gap: 16px; flex: none; }
+/* 錯誤數提示：一句紅字 14／600，不加框、不加底、不加圖示；出現時取代儲存狀態那句 */
+.save-bar__error { margin: 0; white-space: nowrap; }
+.save-bar__state { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); white-space: nowrap; }
+.save-bar__error:not([hidden]) ~ .save-bar__state { display: none; }
+.save-bar__acts { display: flex; align-items: center; gap: 8px; }
+.site .save-bar__acts .btn { height: 40px; padding: 0 16px; font-size: 15px; }
+/* 下方內容：段落導覽與錨點讓開固定列 */
+.save-bar ~ .admin__body .form-index { top: calc(var(--admin-bar-h, 0px) + var(--save-bar-h) + 24px); }
+.save-bar ~ .admin__body .form-section, .save-bar ~ .admin__body .admin-block { scroll-margin-top: calc(var(--admin-bar-h, 0px) + var(--save-bar-h) + 16px); }
+@media (max-width: 640px) {
+  .save-bar__inner { padding-top: 12px; padding-bottom: 12px; }
+  .site .save-bar__title { font-size: 20px; line-height: 28px; }
+  /* 手機：取消、主按鈕與錯誤數提示移到視窗底部的置底列（同置底區規則） */
+  .save-bar__side { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sticky); flex-direction: column; align-items: stretch; gap: 12px; padding: 12px 20px 20px; border-top: 1px solid var(--line); background: var(--g-0); }
+  .save-bar__error, .save-bar__state { text-align: center; white-space: normal; }
+  .save-bar__acts { flex-wrap: wrap; }
+  .save-bar__acts .btn { flex: 1 1 0; }
+  .site .save-bar__acts .btn { height: 44px; }
+  .save-bar__acts:has(> .btn:nth-child(3)) > .btn--primary { flex-basis: 100%; order: 1; }
+  .save-bar ~ .admin__body { padding-bottom: 160px; }
+}
+
+/* ---- 右側設定欄：整頁表單的主欄＋右欄（約 2:1），右欄放狀態、分類、標籤、負責人這類附屬屬性 ----
+   <div class="form-page">
+     <div class="form-page__main"><section class="admin-block">…主要欄位…</section></div>
+     <aside class="form-page__side" aria-label="設定"><section class="admin-block">…狀態…</section></aside>
+   </div>
+   ≥1100 兩欄、右欄跟著頁面捲動；≤1099 一欄，右欄移到主欄上方（加 .form-page--side-last 改放下方） */
+.form-page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.form-page__main, .form-page__side { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.form-page__side .admin-block { gap: 16px; }
+.form-page__side .input, .form-page__side .select { height: 44px; }
+@media (min-width: 1100px) { .form-page { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+@media (max-width: 1099px) { .form-page__side { order: -1; } .form-page--side-last .form-page__side { order: 0; } }
+@media (max-width: 640px) { .form-page, .form-page__main, .form-page__side { gap: 16px; } }
+
+/* ---- 活動時間軸：單筆詳情的動態＋備註，留言框在頂端，新的在最上面 ----
+   <section class="activity" id="…" data-wf-activity data-wf-activity-who="王小明">
+     <form class="activity__composer" novalidate><div class="field">…textarea.textarea.activity__input…</div>
+       <div class="activity__composer-acts"><button type="submit" class="btn btn--secondary">新增備註</button></div></form>
+     <ol class="activity__list">
+       <li class="activity__item activity__item--note"><span class="activity__dot" aria-hidden="true"></span>
+         <p class="activity__meta"><span class="activity__who">陳美玲（客服）</span><time class="activity__time">2026/10/15 09:12</time></p>
+         <p class="activity__text">備註內容</p></li>
+       <li class="activity__item">（系統事件：同上，沒有 --note）</li>
+     </ol>
+     <p class="activity__empty" hidden>還沒有任何動態</p>
+   </section> */
+.activity { display: flex; flex-direction: column; gap: 24px; }
+.activity__composer { display: flex; flex-direction: column; gap: 12px; }
+.activity__composer .textarea { min-height: 88px; }
+.activity__composer-acts { display: flex; justify-content: flex-end; gap: 8px; }
+.activity__list { list-style: none; margin: 0; padding: 0; }
+.activity__item { position: relative; padding: 0 0 20px 28px; }
+/* 時間軸直線：從圓點下方接到下一筆，最後一筆不畫 */
+.activity__item::before { content: ""; position: absolute; left: 5px; top: 20px; bottom: 0; width: 2px; background: var(--line); }
+.activity__item:last-child { padding-bottom: 0; }
+.activity__item:last-child::before { content: none; }
+.activity__dot { position: absolute; left: 0; top: 6px; width: 12px; height: 12px; border: 2px solid var(--g-400); border-radius: 50%; background: var(--g-0); }
+.activity__item--note .activity__dot { border-color: var(--g-700); background: var(--g-700); }
+.activity__meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: var(--fs-sub); line-height: 24px; }
+.activity__who { font-weight: 600; color: var(--g-900); }
+.activity__time { color: var(--g-500); font-variant-numeric: tabular-nums; }
+.activity__text { margin-top: 4px; font-size: var(--fs-body); line-height: 1.6; color: var(--g-800); overflow-wrap: anywhere; }
+.activity__item--note .activity__text { margin-top: 8px; padding: 12px 16px; border-radius: var(--radius); background: var(--g-50); white-space: pre-line; }
+.activity__item.is-new { animation: wf-fade-in var(--dur-overlay) var(--ease-out); }
+.activity__empty { font-size: var(--fs-sub); line-height: 24px; color: var(--g-500); }
+
+/* ---- 表單型對話框（2～8 個欄位、沒有子項目）：與 alert 同一版型，標題與欄位靠左；Web 最寬 480 ----
+   <div class="alert-layer" id="…" hidden><form class="alert alert--form" role="dialog" aria-modal="true" novalidate>
+     <p class="alert__title">新增門市</p>
+     <div class="alert__field field"><label class="field__label" for="…">門市名稱</label><input class="input" id="…" /></div>
+     <p class="notice notice--error alert__error" data-wf-form-error role="alert" hidden></p>
+     <div class="alert__acts"><button type="button" class="alert__btn" data-wf-close>取消</button><button type="submit" class="alert__btn alert__btn--primary">建立</button></div>
+   </form></div> */
+.alert--form { text-align: left; }
+.alert--form .alert__field + .alert__field { margin-top: 16px; }
+.alert--form .alert__field .field__error { margin-top: 0; } /* 欄位裡已有 8 的間距，錯誤字緊貼欄位下方 8 */
+.alert--form .alert__error { margin-top: 16px; text-align: center; }
+.alert--form, body > .alert-layer .alert--form { max-width: 480px; }
+
+/* ================= 3h 互動狀態（互動原型階段補件：按鈕載入中三點、整表單鎖定、按下回饋、輕提示淡出） =================
+   行為在 proto.js：setButtonLoading（三點＋鎖表單）、initForm（gateRules 灰但可點）、toast（.is-on 淡入淡出）。 */
+
+/* ---- 按鈕載入中：文字換「○○中」＋三顆 5px 圓點（間距 4）上下跳，1 秒循環、各錯開 0.15 秒 ---- */
+.btn .bdots { display: inline-flex; align-items: center; gap: 4px; height: 8px; }
+.btn .bdots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: wf-bdot 1s ease-in-out infinite; }
+.btn .bdots span:nth-child(2) { animation-delay: 0.15s; }
+.btn .bdots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes wf-bdot { 0%, 60%, 100% { transform: none; opacity: 0.55; } 30% { transform: translateY(-3px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .btn .bdots span { animation: none; opacity: 0.8; } } /* 減少動態：三點靜止 */
+
+/* ---- 整表單鎖定：載入中欄位 disabled、容器 .is-busy 淡化且不可點（還原函式一併解鎖） ---- */
+.is-busy { opacity: 0.55; pointer-events: none; } /* 只加在表單容器；載入中的按鈕在表單外（置底區）時不淡化，才看得清楚「○○中」 */
+form.is-busy .input, form.is-busy .select, form.is-busy .textarea { background: var(--g-100); border-color: var(--g-300); }
+
+/* ---- 按下回饋（pressed）：App 一定要有，Web 與 hover 共用；鍵盤焦點外框不受影響 ---- */
+.btn:active:not(:disabled):not(.is-loading), .chip:active:not(:disabled), .list-row:active, .choice-card:active { transform: scale(0.98); }
+.btn--primary:active:not(:disabled):not(.is-loading) { background: var(--g-900); border-color: var(--g-900); }
+.btn--secondary:active:not(:disabled), .btn--ghost:active:not(:disabled) { background: var(--g-100); }
+@media (prefers-reduced-motion: reduce) { .btn:active, .chip:active, .list-row:active, .choice-card:active { transform: none; } }
+
+/* ---- 滑過回饋（hover，桌機 Web；觸控裝置不套）：按鈕底色／邊框加深、膠囊底色加深、文字鈕變深並加底線，過渡 150ms ----
+   只在 .site（Web 頁）生效；已選的膠囊、停用與載入中的按鈕不變 */
+@media (hover: hover) {
+  .site .btn, .site .chip, .site .text-btn { transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out); }
+  .site .btn--primary:hover:not(:disabled):not(.is-loading):not(.is-disabled) { background: var(--g-900); border-color: var(--g-900); }
+  .site .btn--secondary:hover:not(:disabled):not(.is-loading):not(.is-disabled), .site .btn--ghost:hover:not(:disabled):not(.is-loading):not(.is-disabled) { background: var(--g-50); border-color: var(--g-500); }
+  .site .chip:hover:not([aria-pressed="true"]):not(.is-on):not(:disabled) { background: var(--g-50); border-color: var(--g-500); }
+  .site .text-btn:hover:not(:disabled) { color: var(--g-900); text-decoration: underline; text-underline-offset: 3px; }
+}
+
+/* ---- 輕提示淡入淡出 200ms：proto.js 加 .is-on 才顯示；重複觸發先拿掉 .is-on、reflow 再加回 ---- */
+.toast { opacity: 0; transition: opacity 200ms ease; }
+.toast.is-on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } } /* 減少動態：直接出現、直接消失 */
+
+/* ================= 3i 對話元件（AI 對話頁：對話流、泡泡、打字中、等待文案、逐字游標、輸入列、追問膠囊、對話流內重試） =================
+   行為在 proto.js 的 WfProto.chat（feed／addBubble／addTyping／waitThen／typeInto／lockComposer／addChoices／addInlineRetry）。
+   結構：
+   <div class="chat">
+     <div class="chat-feed" id="chat-feed"></div>                       ← 對話流（自己可捲；放在 .scr__body 裡時由 .scr__body 捲）
+     <form class="chat-composer" id="chat-composer">                     ← 輸入列（App 放在 .scr__foot 裡）
+       <textarea class="textarea chat-composer__input" rows="1" maxlength="500"></textarea>
+       <button type="submit" class="btn btn--primary btn--sm chat-composer__send">送出</button>
+     </form>
+   </div>
+   灰階：AI 泡泡淺灰底、使用者泡泡深灰底白字，彼此對比足夠；最大寬 80%。 */
+.chat { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.chat-feed { display: flex; flex-direction: column; gap: var(--gap-item); flex: 1; min-height: 0; overflow-y: auto; padding: var(--gap-group) 0; overscroll-behavior: contain; }
+.scr__body > .chat-feed, .scr__body .chat > .chat-feed { overflow: visible; flex: none; } /* 在 App 可捲區裡：交給 .scr__body 捲，不做雙重捲軸 */
+
+/* ---- 泡泡：AI 靠左、使用者靠右、系統訊息置中灰字 ---- */
+.bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: var(--fs-body); line-height: var(--lh-body); word-break: break-word; overflow-wrap: anywhere; }
+.bubble--ai { align-self: flex-start; background: var(--g-100); color: var(--g-900); border-bottom-left-radius: 4px; }
+.bubble--user { align-self: flex-end; background: var(--g-800); color: var(--g-0); border-bottom-right-radius: 4px; }
+.bubble--system { align-self: center; max-width: 100%; padding: 0; background: none; color: var(--g-500); font-size: var(--fs-sub); text-align: center; }
+.bubble--user + .bubble--ai, .bubble--ai + .bubble--user { margin-top: var(--gap-tight); } /* 換人說話多留一點 */
+
+/* ---- 打字中：三顆 6px 灰點上下跳（位移 −4px），1 秒循環、各錯開 0.15 秒；減少動態時靜止 ---- */
+.bubble--typing { display: inline-flex; align-items: center; min-height: 40px; }
+.tdots { display: inline-flex; gap: 4px; align-items: center; height: 10px; }
+.tdots span { width: 6px; height: 6px; border-radius: 50%; background: var(--g-400); animation: wf-tdot 1s ease-in-out infinite; }
+.tdots span:nth-child(2) { animation-delay: 0.15s; }
+.tdots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes wf-tdot { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .tdots span { animation: none; } }
+
+/* ---- 等待文案：泡泡裡一行灰字，逐段換字；換字時淡出 200ms（減少動態不淡出） ---- */
+.bubble--wait { color: var(--g-600); }
+.bubble__wait { display: inline-block; transition: opacity 200ms ease; }
+.bubble__wait.is-fading { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .bubble__wait { transition: none; } .bubble__wait.is-fading { opacity: 1; } }
+
+/* ---- 逐字出現的尾端游標 ---- */
+.type-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.15em; background: var(--g-700); animation: wf-caret 1s steps(1) infinite; }
+@keyframes wf-caret { 50% { opacity: 0; } }
+
+/* ---- 輸入列：多行輸入框 1 行起自動長高、最多約 4 行後框內捲；送出鈕空白時 disabled；回覆中整列鎖定 ---- */
+.chat-composer { display: flex; align-items: flex-end; gap: var(--gap-item); width: 100%; }
+.chat-composer__input { flex: 1; width: auto; min-height: var(--h-input); max-height: 118px; padding: 12px var(--pad-control); border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--g-0); color: var(--g-900); font: inherit; font-size: var(--fs-body); line-height: 1.5; resize: none; overflow-y: auto; }
+.chat-composer__input::placeholder { color: var(--g-400); font-weight: 400; }
+.chat-composer__input:focus { outline: none; border: 1.5px solid var(--g-800); box-shadow: 0 0 0 3px rgba(44, 44, 44, 0.08); }
+.chat-composer__send { flex: none; height: var(--h-input); min-width: 64px; }
+.chat-composer .icon-btn { flex: none; height: var(--h-input); width: var(--h-input); }
+.chat-composer.is-reply-locked .chat-composer__input,
+.chat-composer .chat-composer__input:disabled { background: var(--g-100); border-color: var(--g-300); color: var(--g-500); }
+.site .chat-composer__input { min-height: 44px; padding: 9px var(--pad-control); }
+.site .chat-composer__send, .site .chat-composer .icon-btn { height: 44px; }
+
+/* ---- 追問膠囊：跟在 AI 那句話下面從左排、換行左緣對齊（寫死的歡迎建議才置中：加 .chips--center） ---- */
+.chat-choices { align-self: stretch; max-width: 100%; display: flex; flex-direction: column; gap: var(--gap-item); }
+.chat-choices .chips { justify-content: flex-start; }
+.chips--center { justify-content: center; }
+/* 單選：淺灰膠囊、不包外框；多選：同一塊外框（淺灰底、灰框、圓角）＋框內白底膠囊，確認鈕框內靠右 */
+.chat-choices:not(.chat-choices--multi) .chip { background: var(--g-100); border-color: var(--g-100); }
+.chat-choices__box { background: var(--g-100); border-color: var(--g-300); }
+.chat-choices__box .chip { background: var(--g-0); }
+.chat-choices__box .chip[aria-pressed="true"], .chat-choices__box .chip.is-on { background: var(--g-800); }
+.chat-choices__acts { display: flex; justify-content: flex-end; }
+.chat-choices__skip { display: flex; justify-content: flex-end; } /* 「先跳過」放外框外靠右 */
+
+/* ---- 已送出後失敗：對話流內一行灰字＋底線文字鈕（不用紅底泡泡、不用錯誤卡） ---- */
+.chat-retry { align-self: flex-start; display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-tight); font-size: var(--fs-sub); color: var(--g-600); }
+.chat-retry .text-btn { min-height: auto; }
+
+/* ---- 讚／倒讚列：每則回覆下方；點任一個整列鎖定（.fb--locked）、另一個變灰 ---- */
+.fb { align-self: flex-start; display: flex; gap: var(--gap-tight); }
+.fb .icon-btn { width: 36px; height: 36px; }
+.fb.fb--locked .icon-btn { pointer-events: none; }
+.fb.fb--locked .icon-btn:not([aria-pressed="true"]) { opacity: 0.4; }
+
+/* ---- 關閉轉場與動畫：網址帶 motion=0（截圖驗收用），proto.js 在 <html> 加 .wf-no-motion ---- */
+.wf-no-motion *, .wf-no-motion *::before, .wf-no-motion *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+
+/* ---- 專案新增：機器人表情（迎賓機器人歡迎頁主角區；最接近既有元件：.ph-img 圖片佔位） ----
+   <div class="robot-face" role="img" aria-label="微笑的機器人表情">
+     <div class="robot-face__eyes"><span class="robot-face__eye"></span><span class="robot-face__eye"></span></div>
+     <span class="robot-face__mouth"></span></div> */
+.robot-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-block);
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sheet);
+  background: var(--g-800);
+}
+.robot-face__eyes { display: flex; gap: 72px; }
+.robot-face__eye { width: 44px; height: 56px; border-radius: 50%; background: var(--g-0); }
+.robot-face__mouth { width: 96px; height: 48px; border: 8px solid var(--g-0); border-top: none; border-radius: 0 0 96px 96px; }
+.speech { position: relative; padding: var(--pad-card); border-radius: var(--radius-card); background: var(--g-100); text-align: center; }
+.speech::before { content: ""; position: absolute; top: -10px; left: 50%; margin-left: -10px; border: 10px solid transparent; border-top: none; border-bottom-color: var(--g-100); }
+.speech__title { margin: 0; font-size: var(--fs-title); font-weight: 700; color: var(--g-900); }
+.speech__sub { margin: var(--gap-tight) 0 0; font-size: var(--fs-body); color: var(--g-600); }
+
+/* ---- 專案新增：迎賓機器人 7 吋橫向螢幕外框（1024×600；最接近既有元件：.scr App 畫面骨架） ----
+   <div class="kiosk-wrap"><div class="kiosk">
+     <div class="kiosk__top">…</div><div class="kiosk__body">…</div><div class="kiosk__foot">…</div></div></div> */
+.kiosk-page { background: var(--g-100); }
+.kiosk-wrap { display: flex; justify-content: center; padding: var(--gap-block) 0; }
+.kiosk { display: flex; flex-direction: column; gap: var(--gap-field); width: 1024px; height: 600px; flex-shrink: 0; padding: var(--gap-field) var(--gap-block); background: var(--g-0); transform-origin: top center; }
+@media (max-width: 1099px) { .kiosk { transform: scale(0.8); margin-bottom: -120px; } }
+@media (max-width: 640px) { .kiosk { transform: scale(0.4); margin-bottom: -360px; } }
+.kiosk__top { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-group); min-height: var(--h-btn); }
+.kiosk__title { margin: 0; font-size: var(--fs-display); font-weight: 700; color: var(--g-900); }
+.kiosk__body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-block); align-items: stretch; }
+.kiosk__col { display: flex; flex-direction: column; justify-content: center; gap: var(--gap-field); min-height: 0; }
+.kiosk__col > * { flex-shrink: 0; }
+.kiosk__col > .scan-box { flex-shrink: 1; }
+.kiosk__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-group); }
+.kiosk .btn--kiosk { min-height: calc(var(--h-btn) * 1.5); font-size: var(--fs-title); }
+.kiosk .text-btn { font-size: var(--fs-section); }
+.kiosk__lead { margin: 0; font-size: var(--fs-title); color: var(--g-700); }
+
+/* ---- 專案新增：數字鍵盤（機器人螢幕沒有實體鍵盤時輸入手機號碼；最接近既有元件：.btn 按鈕） ----
+   <div class="keypad"><button type="button" class="keypad__key">1</button>…</div> */
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-item); }
+.keypad__key { min-height: var(--h-touch); border: 1px solid var(--line-strong); border-radius: var(--radius-btn); background: var(--g-0); font: inherit; font-size: var(--fs-title); font-weight: 600; color: var(--g-900); }
+
+/* ---- 專案新增：掃描框（相機畫面＋對準框；最接近既有元件：.ph-img 圖片佔位） ---- */
+.scan-box { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; flex: 1; min-height: 0; border: none; border-radius: var(--radius-card); background: var(--g-800); font: inherit; cursor: pointer; }
+.scan-box__frame { width: 50%; aspect-ratio: 1; border: 4px solid var(--g-0); border-radius: var(--radius-card); }
+.scan-box__hint { position: absolute; left: 0; right: 0; bottom: var(--gap-field); margin: 0; text-align: center; font-size: var(--fs-section); color: var(--g-0); }
+
+/* ================= 4 文件頁（G0 版本紀錄、G1 欄位驗證規則、G4 資訊架構、G5 API 缺口清單、G6 模組錯誤處理、G7 專案 UX 準則） ================= */
+.doc { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; font-size: var(--fs-body); }
+.doc__title { font-size: 24px; margin-bottom: 4px; }
+.doc__lead { color: var(--g-600); margin-bottom: 24px; }
+.doc-card { border: 1px solid var(--line); border-radius: var(--radius-card); padding: 20px; margin-bottom: 16px; scroll-margin-top: 16px; }
+.doc-card.is-focus { border: 2px solid var(--g-800); }
+.doc-card__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.doc-card__title { font-size: 18px; }
+.doc-card__meta { font-size: var(--fs-sub); color: var(--g-600); }
+.doc-card h4 { font-size: var(--fs-sub); color: var(--g-600); margin: 12px 0 4px; }
+.doc-card ul { padding-left: 20px; }
+.doc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.doc-chip { border: 1px solid var(--g-400); border-radius: 6px; background: var(--g-50); padding: 4px 12px; font: inherit; font-size: var(--fs-sub); cursor: pointer; }
+.doc-empty { padding: 48px 16px; text-align: center; color: var(--g-600); border: 1px dashed var(--g-400); border-radius: var(--radius-card); }
+
+/* G1 欄位驗證規則（pages/field-rules.html）：灰色頁首＋搜尋、左側索引、右側每個欄位一張規格卡
+   卡片由上而下：灰色標題列（欄位名、最後修改、搜尋關鍵字）→ 提示字文案（輸入框預覽）→ 聚焦時 → 輸入中
+   → 點「送出」按鈕檢查 → 錯誤顯示方式（每個錯誤一個錯誤態預覽）→ 使用頁面（頁碼＋頁名，點了跳該頁） */
+html.catalog-root, html.catalog-root body { margin: 0; height: 100%; }
+html.catalog-root body { color: var(--g-900); background: var(--g-100); }
+.catalog { display: grid; grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: auto 1fr; height: 100%; }
+.catalog__head { grid-column: 1 / -1; background: var(--g-600); color: var(--g-0); padding: 20px 24px 16px; }
+.catalog__kicker { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; } /* wf-allow-small：頁首分類小字 */
+.catalog__title { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.catalog__meta { margin: 8px 0 0; font-size: 13px; opacity: 0.9; } /* wf-allow-small：最後修改日期 */
+.catalog__search { margin-top: 14px; }
+.catalog__search-label { display: block; font-size: 12px; margin-bottom: 6px; opacity: 0.9; } /* wf-allow-small：搜尋框標籤 */
+.catalog__search-input { width: min(420px, 100%); height: 40px; border: none; border-radius: 8px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--g-900); }
+.catalog__search-input:focus { outline: 2px solid var(--g-400); outline-offset: 1px; }
+.catalog__index { overflow: auto; background: var(--g-0); border-right: 1px solid var(--line); padding: 16px 12px 24px; }
+.catalog__index-title { margin: 0 8px 8px; font-size: 12px; font-weight: 700; color: var(--g-600); letter-spacing: 0.04em; } /* wf-allow-small：索引標題 */
+.catalog__index-list { list-style: none; margin: 0; padding: 0; }
+.catalog__index-list a { display: block; padding: 8px 10px; border-radius: 8px; color: var(--g-700); text-decoration: none; font-size: 13px; line-height: 1.4; } /* wf-allow-small：索引連結 */
+.catalog__index-list a:hover, .catalog__index-list a.is-active { background: var(--g-150); color: var(--g-900); }
+.catalog__index-list a.is-active { font-weight: 700; }
+.catalog__index-list li[hidden], .catalog__main article[hidden] { display: none; }
+.catalog__main { overflow: auto; padding: 20px 24px 48px; }
+.catalog__empty { margin: 24px 0; color: var(--g-600); font-size: 14px; }
+.spec { background: var(--g-0); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 800px; margin: 0 auto 16px; overflow: hidden; scroll-margin-top: 16px; }
+.spec:focus { outline: none; }
+.spec.is-target { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.18); }
+.spec__banner { background: var(--g-600); color: var(--g-0); padding: 16px 20px 14px; }
+.spec__name { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.spec__anchor { color: inherit; text-decoration: none; }
+.spec__anchor:hover, .spec__anchor:focus { text-decoration: underline; }
+.spec__modified { margin: 6px 0 0; font-size: 12px; opacity: 0.9; } /* wf-allow-small：最後修改日期 */
+.spec__keywords { margin: 8px 0 0; font-size: 12px; opacity: 0.9; } /* wf-allow-small：搜尋關鍵字 */
+.spec__body { padding: 16px 20px 20px; }
+.spec__body > .spec__h:first-child { margin-top: 0; }
+.spec__h { margin: 16px 0 8px; font-size: 16px; font-weight: 700; }
+.spec__preview { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: min(335px, 100%); margin: 0 0 16px; pointer-events: none; }
+.spec__bullets { margin: 0 0 8px; padding: 0 0 0 1.2em; font-size: 14px; line-height: 1.55; color: var(--g-700); }
+.spec__bullets li + li { margin-top: 6px; }
+.spec__hr { border: none; border-top: 1px solid var(--line); margin: 12px -20px; }
+.spec__error { margin: 0 0 16px; }
+.spec__uses { background: var(--g-100); padding: 16px 20px 18px; }
+.spec__uses-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.spec__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.spec__chip { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: var(--g-200); color: var(--g-900); font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; } /* wf-allow-small：頁碼標籤 */
+.spec__chip:hover { background: var(--g-300); }
+
+/* 文件頁共用：目錄、分組標題、條列、表格（G5～G7，畫法在 doc-render.js） */
+.doc--wide { max-width: none; }
+.doc-index { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 24px; font-size: var(--fs-sub); }
+.doc-index__link { color: var(--g-700); text-decoration: underline; text-underline-offset: 4px; }
+.doc-group { font-size: 20px; margin: 32px 0 12px; }
+.doc-card__summary { margin-bottom: 8px; }
+.doc-list { padding-left: 20px; }
+.doc-list li + li { margin-top: 4px; }
+.doc-table-wrap { overflow-x: auto; margin-top: 12px; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sub); }
+.doc-table th, .doc-table td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+.doc-table th { background: var(--g-50); font-weight: 600; white-space: nowrap; }
+
+/* G4 資訊架構：產品在上，功能模組橫向排，模組底下的頁直向排；每頁一個方框結構 */
+.ia { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+.ia__root { border: 2px solid var(--g-800); border-radius: var(--radius-card); padding: 8px 20px; font-weight: 600; }
+.ia__modules { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; max-width: 100%; padding-bottom: 8px; border-top: 1px solid var(--g-400); padding-top: 24px; }
+.ia__module { flex: 0 0 240px; display: flex; flex-direction: column; gap: 12px; }
+.ia__module-title { font-size: 16px; border: 1px solid var(--g-700); border-radius: 8px; padding: 8px 12px; background: var(--g-100); }
+.ia__page { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
+.ia__page--key { border: 2px solid var(--g-800); }
+.ia__page.is-link { cursor: pointer; }
+.ia__page-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ia__page-name { font-weight: 600; }
+.ia__key { font-size: var(--fs-sub); border: 1px solid var(--g-800); border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+.ia__key-why { font-size: var(--fs-sub); color: var(--g-600); margin-top: 4px; }
+.ia__frame { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; border: 1px solid var(--g-300); border-radius: 8px; padding: 8px; background: var(--g-50); }
+.ia__box { border: 1px solid var(--g-400); border-radius: 4px; background: #fff; padding: 4px 8px; font-size: var(--fs-sub); color: var(--g-700); min-height: 28px; }
+.ia__box--m { min-height: 48px; }
+.ia__box--l { min-height: 80px; }
+

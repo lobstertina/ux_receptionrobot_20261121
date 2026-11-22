@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G6 模組錯誤處理</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <h1 class="doc__title">模組錯誤處理</h1>
+      <p class="doc__lead">每個模組的錯誤怎麼分層、每一層使用者看到什麼、能怎麼辦。各頁工程標註的顯示規則照這裡寫。</p>
+      <div id="doc-root"></div>
+    </main>
+
+    <script src="../wireframe.config.js"></script>
+    <script src="../assets/page-map.js"></script>
+    <script src="../assets/doc-pages.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script src="../assets/doc-render.js"></script>
+    <script>
+      WfDocRender.render("moduleErrors", document.getElementById("doc-root"), "G6");
+    </script>
+  </body>
+</html>

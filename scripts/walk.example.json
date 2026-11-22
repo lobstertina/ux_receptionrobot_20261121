@@ -1,0 +1,451 @@
+{
+  "title": "元件示範頁 G2 互動走查（範例）",
+  "url": "index.html?p=G2&menu=0&notes=0",
+  "viewport": {
+    "width": 1200,
+    "height": 900
+  },
+  "steps": [
+    {
+      "op": "點「排序方式面板」",
+      "do": [
+        {
+          "scroll": "#demo-1"
+        },
+        {
+          "click": "[data-wf-open-sheet=\"sheet-sort\"]"
+        }
+      ],
+      "expect": "底部面板開啟",
+      "check": {
+        "visible": "#sheet-sort .sheet"
+      },
+      "shot": "底部面板-開啟"
+    },
+    {
+      "op": "按 ESC",
+      "do": [
+        {
+          "press": "Escape"
+        }
+      ],
+      "expect": "面板關閉，回到原頁",
+      "check": {
+        "hidden": "#sheet-sort .sheet",
+        "page": "G2"
+      }
+    },
+    {
+      "op": "再開面板，點「最舊優先」",
+      "do": [
+        {
+          "click": "[data-wf-open-sheet=\"sheet-sort\"]"
+        },
+        {
+          "click": "#sheet-sort .sheet__option:nth-child(2)"
+        }
+      ],
+      "expect": "選中後面板關閉，出現輕提示「已改為最舊優先」",
+      "check": {
+        "hidden": "#sheet-sort .sheet",
+        "text": {
+          "sel": ".toast",
+          "has": "已改為最舊優先"
+        }
+      }
+    },
+    {
+      "op": "點「輸入型（重新命名）」",
+      "do": [
+        {
+          "scroll": "#demo-4"
+        },
+        {
+          "click": "#d4-rename"
+        }
+      ],
+      "expect": "對話框開啟，輸入框預帶原名稱",
+      "check": {
+        "visible": ".alert-layer[data-wf-temp] .input",
+        "value": {
+          "sel": ".alert-layer[data-wf-temp] .input",
+          "is": "十月的紀錄"
+        }
+      }
+    },
+    {
+      "op": "清空輸入框後按「儲存」",
+      "do": [
+        {
+          "fill": ".alert-layer[data-wf-temp] .input",
+          "value": ""
+        },
+        {
+          "click": ".alert-layer[data-wf-temp] .alert__btn--primary"
+        }
+      ],
+      "expect": "對話框不關，輸入框下方出現錯誤提示",
+      "check": {
+        "visible": ".alert-layer[data-wf-temp] .field__error"
+      },
+      "shot": "重新命名-空值"
+    },
+    {
+      "op": "輸入「十一月的紀錄」後按「儲存」",
+      "do": [
+        {
+          "fill": ".alert-layer[data-wf-temp] .input",
+          "value": "十一月的紀錄"
+        },
+        {
+          "click": ".alert-layer[data-wf-temp] .alert__btn--primary"
+        }
+      ],
+      "expect": "對話框關閉，目前名稱改為「十一月的紀錄」",
+      "check": {
+        "count": {
+          "sel": ".alert-layer[data-wf-temp]",
+          "is": 0
+        },
+        "text": {
+          "sel": "#d4-name",
+          "has": "十一月的紀錄"
+        }
+      }
+    },
+    {
+      "op": "第一列點「更多」→「刪除」",
+      "do": [
+        {
+          "scroll": "#demo-6"
+        },
+        {
+          "click": "#d6-a [data-wf-popmenu]"
+        },
+        {
+          "click": "#menu-delete"
+        }
+      ],
+      "expect": "出現刪除確認對話框，確認鈕為危險樣式",
+      "check": {
+        "visible": ".alert-layer[data-wf-temp] .alert__btn--danger"
+      }
+    },
+    {
+      "op": "確認對話框按「刪除」",
+      "do": [
+        {
+          "click": ".alert-layer[data-wf-temp] .alert__btn--danger"
+        },
+        {
+          "wait": 1500
+        }
+      ],
+      "expect": "該列移除，出現輕提示「已刪除」",
+      "check": {
+        "count": {
+          "sel": "#d6-a",
+          "is": 0
+        },
+        "text": {
+          "sel": ".toast",
+          "has": "已刪除"
+        }
+      }
+    },
+    {
+      "op": "對話元件：捲到第 19 區，輸入框空白時送出鈕停用",
+      "do": [
+        {
+          "scroll": "#demo-19 .snippet"
+        }
+      ],
+      "expect": "送出鈕 disabled",
+      "check": {
+        "attr": {
+          "sel": "#d19-send",
+          "name": "disabled",
+          "is": true
+        }
+      }
+    },
+    {
+      "op": "輸入「你好」",
+      "do": [
+        {
+          "type": "#d19-input",
+          "value": "你好"
+        }
+      ],
+      "expect": "送出鈕可按；送出鈕與輸入框底緣對齊",
+      "check": {
+        "attr": {
+          "sel": "#d19-send",
+          "name": "disabled",
+          "is": false
+        },
+        "rect": {
+          "sel": "#d19-send",
+          "prop": "bottom",
+          "sameAs": "#d19-input"
+        }
+      }
+    },
+    {
+      "op": "按 Enter 送出",
+      "do": [
+        {
+          "press": "Enter"
+        }
+      ],
+      "expect": "使用者泡泡靠右出現、輸入列鎖定、等待文案出現",
+      "check": {
+        "visible": "#d19-feed .bubble--user",
+        "attr": [
+          {
+            "sel": "#d19-input",
+            "name": "disabled",
+            "is": true
+          },
+          {
+            "sel": "#d19-composer",
+            "name": "class",
+            "has": "is-reply-locked"
+          }
+        ],
+        "text": {
+          "sel": "#d19-feed .bubble--wait",
+          "has": "正在"
+        }
+      }
+    },
+    {
+      "op": "等待文案走完",
+      "do": [
+        {
+          "wait": 1900
+        }
+      ],
+      "expect": "等待泡泡移除、打字中泡泡出現",
+      "check": {
+        "hidden": "#d19-feed .bubble--wait",
+        "visible": "#d19-feed .bubble--typing"
+      },
+      "shot": "對話-打字中"
+    },
+    {
+      "op": "逐字回覆完成",
+      "do": [
+        {
+          "wait": 2500
+        }
+      ],
+      "expect": "打字中移除、回覆出現、輸入列解鎖、對話貼著底部",
+      "check": {
+        "hidden": "#d19-feed .bubble--typing",
+        "text": {
+          "sel": "#d19-feed .bubble--ai:last-child",
+          "has": "好的"
+        },
+        "attr": {
+          "sel": "#d19-input",
+          "name": "disabled",
+          "is": false
+        },
+        "scrollBottom": "#main-body"
+      },
+      "shot": "對話-回覆完成"
+    },
+    {
+      "op": "點輸入框",
+      "do": [
+        {
+          "click": "#d19-input"
+        }
+      ],
+      "expect": "焦點在輸入框",
+      "check": {
+        "focused": "#d19-input"
+      }
+    },
+    {
+      "op": "對話元件：輸入「選項」按 Enter，等追問膠囊",
+      "do": [
+        {
+          "type": "#d19-input",
+          "value": "選項"
+        },
+        {
+          "press": "Enter"
+        },
+        {
+          "wait": 3400
+        }
+      ],
+      "expect": "單選膠囊出現（三顆）",
+      "check": {
+        "count": {
+          "sel": "#d19-feed .chat-choices .chip",
+          "is": 3
+        }
+      }
+    },
+    {
+      "op": "點「日常保養」，等多選框",
+      "do": [
+        {
+          "click": "#d19-feed .chat-choices .chip:nth-child(1)"
+        },
+        {
+          "wait": 2800
+        }
+      ],
+      "expect": "多選框出現、確認鈕未選時不可按",
+      "check": {
+        "visible": "#d19-feed .chat-choices--multi",
+        "attr": {
+          "sel": "#d19-feed .chat-choices__acts .btn",
+          "name": "disabled",
+          "is": true
+        }
+      }
+    },
+    {
+      "op": "勾「價格」後改打字「也在意包裝」送出",
+      "do": [
+        {
+          "click": "#d19-feed .chat-choices__box .chip:nth-child(1)"
+        },
+        {
+          "type": "#d19-input",
+          "value": "也在意包裝"
+        },
+        {
+          "press": "Enter"
+        }
+      ],
+      "expect": "已勾的膠囊併進這次送出（泡泡「價格：也在意包裝」）、選項組收起",
+      "check": {
+        "text": {
+          "sel": "#d19-feed",
+          "has": "價格：也在意包裝"
+        },
+        "count": {
+          "sel": "#d19-feed .chat-choices",
+          "is": 0
+        }
+      }
+    },
+    {
+      "op": "開第 3 區的表單頁",
+      "do": [
+        {
+          "scroll": "#demo-3"
+        },
+        {
+          "click": "#demo-3 [data-wf-go]"
+        },
+        {
+          "wait": 600
+        }
+      ],
+      "expect": "推入表單頁",
+      "check": {
+        "visible": "#kb-form"
+      }
+    },
+    {
+      "op": "手機號碼填「123」後離開欄位",
+      "do": [
+        {
+          "type": "#kb-phone",
+          "value": "123"
+        },
+        {
+          "blur": "#kb-phone"
+        }
+      ],
+      "expect": "欄位下方出現「請輸入 09 開頭的 10 碼手機號碼」",
+      "check": {
+        "visible": "#kb-form .field__error",
+        "text": {
+          "sel": "#kb-form .field__error",
+          "has": "09 開頭"
+        }
+      },
+      "shot": "表單-blur 錯誤"
+    },
+    {
+      "op": "填齊後按送出",
+      "do": [
+        {
+          "fill": "#kb-name",
+          "value": "王小明"
+        },
+        {
+          "fill": "#kb-phone",
+          "value": "0912345678"
+        },
+        {
+          "click": "#kb-submit"
+        }
+      ],
+      "expect": "按鈕載入中、整表單鎖定；主按鈕左右邊緣與輸入框對齊",
+      "check": {
+        "attr": [
+          {
+            "sel": "#kb-submit",
+            "name": "class",
+            "has": "is-loading"
+          },
+          {
+            "sel": "#kb-name",
+            "name": "disabled",
+            "is": true
+          },
+          {
+            "sel": "#kb-form",
+            "name": "class",
+            "has": "is-busy"
+          }
+        ],
+        "rect": {
+          "sel": "#kb-submit",
+          "prop": [
+            "left",
+            "right"
+          ],
+          "sameAs": "#kb-phone"
+        }
+      },
+      "shot": "表單-送出中"
+    },
+    {
+      "op": "等 700ms 後",
+      "do": [
+        {
+          "wait": 900
+        }
+      ],
+      "expect": "輕提示「已送出」、表單解鎖、按鈕還原",
+      "check": {
+        "text": {
+          "sel": ".toast",
+          "has": "已送出"
+        },
+        "attr": [
+          {
+            "sel": "#kb-name",
+            "name": "disabled",
+            "is": false
+          },
+          {
+            "sel": "#kb-submit",
+            "name": "disabled",
+            "is": false
+          }
+        ]
+      }
+    }
+  ]
+}

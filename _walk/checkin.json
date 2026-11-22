@@ -1,0 +1,12 @@
+{
+  "title": "A1 報到順向流程走查",
+  "url": "index.html?p=A1.1&menu=0&notes=0",
+  "viewport": { "width": 1240, "height": 800 },
+  "steps": [
+    { "op": "歡迎頁點「我要報到」", "do": [{ "click": "#btn-checkin" }, { "wait": 800 }], "expect": "進報到查詢頁", "check": { "page": "A1.2" } },
+    { "op": "手機號碼輸入 0912 後查詢", "do": [{ "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"9\"" }, { "click": ".keypad__key >> text=\"1\"" }, { "click": ".keypad__key >> text=\"2\"" }, { "click": "#btn-search" }, { "wait": 800 }], "expect": "欄位下方顯示格式錯誤，停在本頁", "check": { "page": "A1.2", "text": { "sel": "form", "has": "請輸入 09 開頭的 10 碼手機號碼" } } },
+    { "op": "清除後輸入 0912345678 查詢", "do": [{ "click": "[data-key=\"clear\"]" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"9\"" }, { "click": ".keypad__key >> text=\"1\"" }, { "click": ".keypad__key >> text=\"2\"" }, { "click": ".keypad__key >> text=\"3\"" }, { "click": ".keypad__key >> text=\"4\"" }, { "click": ".keypad__key >> text=\"5\"" }, { "click": ".keypad__key >> text=\"6\"" }, { "click": ".keypad__key >> text=\"7\"" }, { "click": ".keypad__key >> text=\"8\"" }, { "click": "#btn-search" }, { "wait": 1500 }], "expect": "查詢中後進會議確認頁", "check": { "page": "A1.3" } },
+    { "op": "點「確認報到」", "do": [{ "click": "#btn-confirm" }, { "wait": 800 }], "expect": "進通知等候頁", "check": { "page": "A1.4" } },
+    { "op": "點「完成，回首頁」", "do": [{ "click": "text=完成，回首頁" }, { "wait": 800 }], "expect": "回歡迎頁", "check": { "page": "A1.1" } }
+  ]
+}

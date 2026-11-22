@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>線框原型</title>
+    <!-- 殼層字體：Inter（英數）＋ Noto Sans TC（中文）；離線時退回系統字 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="assets/shell.css" />
+    <!-- 外殼 SaaS 外觀：只蓋上方列／左側選單／畫布底／右側面板，線框內頁不受影響；品牌色在 wireframe.config.js 的 shellBrandColor -->
+    <link rel="stylesheet" href="assets/shell/shell-saas.css" />
+    <!-- 設定與資料一律用 script 載入（不用 fetch），才能用 file:// 直接雙擊開啟 -->
+    <script src="wireframe.config.js"></script>
+    <script>
+      // 外殼品牌色：wireframe.config.js 有填 shellBrandColor 就蓋掉預設中性灰（只影響殼層外框與資訊備註框線，不影響線框內頁）
+      (function () {
+        var c = (window.WfConfig || {}).shellBrandColor;
+        if (c) document.documentElement.style.setProperty("--brand", c);
+      })();
+    </script>
+    <script src="assets/page-map.js"></script>
+    <script src="assets/field-rules.js"></script>
+    <script src="history/changelog.js"></script>
+    <!-- 資訊備註模式：區塊資料登錄表（各模組 assets/region-notes/<模組>.js 由下方依 AREAS 自動載入）＋殼層模式切換 -->
+    <script src="assets/region-notes.js"></script>
+    <script src="assets/notes-mode.js"></script>
+  </head>
+  <body class="is-mode-prototype">
+    <header class="topbar">
+      <button type="button" class="toggle" id="menu-toggle" aria-expanded="true" aria-controls="menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+        <span>頁面</span>
+      </button>
+      <div class="topbar__project" id="project" title="雙擊回到目前流程起點">
+        <span class="topbar__mark" id="project-mark" aria-hidden="true"></span>
+        <span class="topbar__name" id="project-name"></span>
+      </div>
+      <select id="version-select" class="topbar__select" aria-label="切換原型版本"></select>
+      <div class="topbar__spacer"></div>
+      <label class="role-switch" id="role-switch" hidden>
+        <span class="role-switch__label">檢視角色</span>
+        <select id="role-select" class="topbar__select role-switch__select"></select>
+      </label>
+      <span class="width-label" id="width-label" hidden aria-live="polite"></span>
+      <!-- 模式切換（分段控制）：Prototype＝可互動、不放標註；資訊備註＝點畫面區塊看該區塊的備註（網址 ?mode=notes） -->
+      <div class="mode-switch" role="group" aria-label="檢視模式">
+        <button type="button" class="mode-switch__btn" data-shell-mode="prototype" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 9-6 1.5L10 20z" /></svg>
+          <span>Prototype</span>
+        </button>
+        <button type="button" class="mode-switch__btn" data-shell-mode="notes" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="3 2.5" /><path d="M9 10h6M9 14h4" /></svg>
+          <span>資訊備註</span>
+        </button>
+      </div>
+      <button type="button" class="toggle" id="panel-toggle" aria-expanded="false" aria-controls="panel">
+        <span>工程標註</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7" /></svg>
+      </button>
+    </header>
+
+    <div class="layout is-panel-closed" id="layout">
+      <div class="menu-slot">
+        <nav class="menu" id="menu" aria-label="頁面選單"></nav>
+      </div>
+
+      <main class="stage stage--app" id="stage">
+        <div class="device-fit" id="device-fit">
+          <div class="device" id="device">
+            <div class="device__screen">
+              <iframe id="frame" class="wf-layer" title="線框畫面"></iframe>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <div class="panel-slot">
+        <aside class="panel" id="panel" aria-label="工程標註"></aside>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+      /* ============================================================
+         殼層（WfShell）
+         - 網址 ?p=頁碼 決定顯示哪一頁；左側選單只是改這個參數。
+         - 網址 ?menu=0|1、?notes=0|1 直接決定左側選單／右側工程標註收合或展開
+           （0＝收合、1＝展開），優先於分頁記住的狀態；截圖驗收用。
+         - 網址 ?w=620 直接指定 Web 畫布寬度（模擬手機寬，畫布置中、兩側淺灰）；?role=主管 指定檢視角色。
+         - 網址 &motion=0 關閉殼層與內頁的所有轉場與動畫（換頁直接切換、浮層直接出現）；截圖驗收一律帶上。
+         - 檢視角色：page-map.js 有 ROLES 就列 ROLES，沒有就列目前頁用到的角色（內頁 data-wf-roles）；
+           切換時通知內頁即時重畫（{wf:"role", role}）。
+         - 兩種模式（右上分段控制；邏輯在 assets/notes-mode.js，內頁那一側在 assets/notes-frame.js）：
+             Prototype（預設）＝可互動、可換頁，右側不放工程標註；
+             資訊備註（網址 ?mode=notes）＝畫面不能互動、不換頁，點畫面區塊看該區塊所有狀態的備註。
+           網址只帶 ?notes=1、沒寫 mode 時也進資訊備註（截圖腳本的「標註」圖用）。
+           內頁 ↔ 殼層另有 {wf:"notes", …} 訊息（框選、選取、填值／點擊），格式見 notes-frame.js。
+         - 殼層與 iframe 內頁只用 postMessage 溝通，不直接讀寫 iframe 的 DOM，
+           所以用 file:// 雙擊開啟也能運作。
+         - 訊息格式（都帶 wf 欄位）：
+             內頁 → 殼層：{wf:"ready", file, code}、{wf:"go", file, params}、
+                         {wf:"goCode", code, params}、{wf:"goBack", fallback}、{wf:"version", id}
+                         {wf:"close", fallback}（關閉獨立任務）；go／goCode 可帶 transition:"push"|"cover"|"none"
+                         ready 另帶 roles（本頁用到的角色）
+             殼層 → 內頁：{wf:"apply", code, params, source}、{wf:"key", key:"Escape"}（焦點在殼層時轉交 ESC）、
+                         {wf:"role", role}（切換檢視角色）
+         - 返回堆疊與轉場：每次換到另一頁就疊一層新的 iframe（舊的一層保留在下面，不重新載入），
+           所以返回時底下那頁的捲動位置、已填內容都還在。
+             push  ＝同層推進：新頁由右推入；返回時往右退出（底下那頁由左滑回）
+             cover ＝獨立任務：新頁由下覆蓋；關閉時往下退出
+           返回（goBack）走「上一動」：退回下面一層；關閉（close）：退到進入這串獨立任務（最近一次 cover）之前。
+           只在 App 外框裡做動態；Web 與文件頁直接切換。從左側選單點頁、重新整理＝清空堆疊。
+           最多保留 6 層活著的 iframe，更早的層退回時重新載入。
+         ============================================================ */
+      (function () {
+        var config = window.WfConfig || {};
+        var latestMap = window.WfPageMap;
+        var latestRules = window.WfFieldRules || null;
+        var changelog = window.WfChangelog || { versions: [] };
+
+        var map = latestMap;
+        var rules = latestRules;
+        var versionId = ""; // ""＝目前工作版（pages/），其他＝history/<id>/ 快照
+        var versionMaps = {}; // 已載入的快照登錄表
+        var snapshots = {}; // 確認有快照的版本
+
+        var currentCode = "";
+        var currentFile = ""; // 目前最上層 iframe 載入的「base + 檔名」
+        // 返回堆疊（只存在記憶體）：每層 { frame, code, fileKey, params, transition }；最後一個是最上層
+        var layers = [];
+        var MAX_LIVE = 6; // 最多保留幾層活著的 iframe
+        var PAGE_MS = 320; // 換頁轉場時間
+
+        var frame = document.getElementById("frame"); // 永遠指向最上層 iframe
+        var screen = frame.parentElement;
+        var stage = document.getElementById("stage");
+        var deviceFit = document.getElementById("device-fit");
+        var device = document.getElementById("device");
+        var layout = document.getElementById("layout");
+        var menu = document.getElementById("menu");
+        var panel = document.getElementById("panel");
+        var menuToggle = document.getElementById("menu-toggle");
+        var panelToggle = document.getElementById("panel-toggle");
+        var widthLabel = document.getElementById("width-label");
+        var versionSelect = document.getElementById("version-select");
+        var roleSwitch = document.getElementById("role-switch");
+        var roleSelect = document.getElementById("role-select");
+
+        var APP_SIZE = { width: 403, height: 840 }; // iPhone 外框含邊框（375×812＋左右上下各 14）
+        var PREFS_KEY = "wf-shell-panels";
+        // 分頁暫存區（關掉分頁就清掉）
+        var tabStore = (function () {
+          try { return window.sessionStorage; } catch (err) { return null; }
+        })();
+        var stageMode = "app";
+        var notesMode = window.WfNotesMode; // 兩種模式（Prototype／資訊備註），見 assets/notes-mode.js
+
+        var SHELL_KEYS = ["p", "v", "menu", "notes", "w", "role", "motion", "mode"]; // 殼層自己用的網址參數，不轉交給內頁（role、motion 另外帶給內頁）
+
+        /* ---------- 模擬寬度（?w=620）與檢視角色（?role=主管） ---------- */
+        var bootQuery = new URLSearchParams(window.location.search);
+        var simW = Math.max(0, parseInt(bootQuery.get("w"), 10) || 0);
+        if (simW && simW < 320) simW = 320;
+        var currentRole = bootQuery.get("role") || "";
+        // 關閉轉場與動畫（&motion=0）：殼層換頁不做動態，內頁也帶上 motion=0
+        var noMotion = bootQuery.get("motion") === "0";
+        if (noMotion) document.documentElement.classList.add("wf-no-motion");
+        var pageRoleList = []; // 目前頁回報的角色
+
+        /* ---------- 面板開合偏好（同一個瀏覽分頁內記住） ---------- */
+        var prefs = { menuClosed: false, panelClosed: true };
+        try {
+          var savedPrefs = JSON.parse(tabStore.getItem(PREFS_KEY) || "null");
+          if (savedPrefs) prefs = savedPrefs;
+        } catch (err) {}
+        function savePrefs() {
+          try { tabStore.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (err) {}
+        }
+        // 網址參數優先：?menu=0 收合左側選單、?menu=1 展開；?notes=0／1 同理控制右側工程標註
+        (function () {
+          var q = new URLSearchParams(window.location.search);
+          var changed = false;
+          if (q.get("menu") === "0" || q.get("menu") === "1") {
+            prefs.menuClosed = q.get("menu") === "0";
+            changed = true;
+          }
+          if (q.get("notes") === "0" || q.get("notes") === "1") {
+            prefs.panelClosed = q.get("notes") === "0";
+            changed = true;
+          }
+          if (changed) savePrefs();
+        })();
+
+        /* ---------- 專案標 ---------- */
+        var projectName = config.projectName || "未命名專案";
+        document.getElementById("project-name").textContent = projectName;
+        document.getElementById("project-mark").textContent = Array.from(projectName.trim())[0] || "專";
+        document.title = projectName + "｜線框原型";
+
+        /* ---------- 工具 ---------- */
+        function fieldRulesOn() {
+          // 欄位驗證規則頁一律啟用（每個輸入欄位都登記在 G1）；只有 field-rules.js 讀不到時才關
+          return !!rules;
+        }
+
+        function isHiddenDoc(code) {
+          // field-rules.js 讀不到時，G1 不出現在選單
+          var s = map.spec(code);
+          return !!(s && s.kind === "doc" && s.file === "field-rules.html" && !fieldRulesOn());
+        }
+
+        function familyOf(code) {
+          return String(code || "").replace(/-\d+$/, "");
+        }
+
+        function flowStart(flowId) {
+          var starts = config.flowStarts || {};
+          return starts[flowId] || map.firstPageOfFlow(flowId) || "";
+        }
+
+        /** 可以打開的頁：已登錄、而且不是「尚未繪製」 */
+        function drawable(code) {
+          var s = map.spec(code);
+          return !!(s && !s.unplanned);
+        }
+
+        function defaultPage() {
+          var d = config.defaultPage;
+          if (d && drawable(d)) return d;
+          var listed = map.listedCodes().filter(function (c) {
+            var s = map.spec(c);
+            return s && s.kind !== "doc" && !s.unplanned;
+          });
+          return listed[0] || map.listedCodes()[0];
+        }
+
+        /** 頁碼解析：別名 → 存在就用；不存在退回流程起點；再不行回預設頁 */
+        function resolveCode(code) {
+          var s = map.spec(code);
+          if (s && !s.unplanned) return s.p;
+          var flowMatch = String(code || "").match(/^[A-Z]\d+/);
+          var start = flowMatch ? flowStart(flowMatch[0]) : "";
+          if (start && drawable(start)) return start;
+          return defaultPage();
+        }
+
+        function effectiveDevice(spec) {
+          // 文件頁預設整片顯示；寫了 device:"app" 的文件頁（App 元件示範）放進 App 外框，device:"web"（Web 元件示範）顯示寬度標示
+          if (spec.kind === "doc") return spec.device === "app" ? "app" : spec.device === "web" ? "web" : "doc";
+          var mode = spec.device || config.mode || "app";
+          return mode === "web" ? "web" : "app";
+        }
+
+        function pageBase() {
+          return versionId ? "history/" + versionId + "/pages/" : "pages/";
+        }
+
+        function paramsToQuery(params) {
+          var q = new URLSearchParams();
+          Object.keys(params || {}).forEach(function (k) {
+            if (SHELL_KEYS.indexOf(k) < 0 && params[k] != null) q.set(k, params[k]);
+          });
+          return q;
+        }
+
+        function post(msg) {
+          try {
+            if (frame.contentWindow) frame.contentWindow.postMessage(msg, "*");
+          } catch (err) {}
+        }
+
+        /* ---------- 網址同步 ---------- */
+        function readLocation() {
+          var q = new URLSearchParams(window.location.search);
+          // 備援：某些環境不允許改 query 時，改讀 #p=
+          if (!q.get("p") && /^#p=/.test(window.location.hash)) {
+            q = new URLSearchParams(window.location.hash.slice(1));
+          }
+          var params = {};
+          q.forEach(function (value, key) {
+            if (SHELL_KEYS.indexOf(key) < 0) params[key] = value;
+          });
+          return { code: q.get("p") || "", version: q.get("v") || "", params: params };
+        }
+
+        function writeLocation(code, params, replace) {
+          var q = paramsToQuery(params);
+          var full = new URLSearchParams();
+          full.set("p", code);
+          if (versionId) full.set("v", versionId);
+          if (simW) full.set("w", String(simW));
+          if (noMotion) full.set("motion", "0");
+          if (currentRole && roleList().length) full.set("role", currentRole);
+          if (notesMode.locationParam()) full.set("mode", notesMode.locationParam());
+          q.forEach(function (v, k) { full.set(k, v); });
+          var next = window.location.pathname + "?" + full.toString();
+          if (next === window.location.pathname + window.location.search) return;
+          try {
+            if (replace) history.replaceState({ p: code }, "", next);
+            else history.pushState({ p: code }, "", next);
+          } catch (err) {
+            // 不允許改網址時不影響操作，只是重新整理會回到預設頁
+          }
+        }
+
+        /* ---------- 畫布：App 外框縮放、Web 寬度標示 ---------- */
+        function setStageMode(mode) {
+          stageMode = mode;
+          stage.classList.remove("stage--app", "stage--web", "stage--doc");
+          stage.classList.add("stage--" + mode);
+          fitStage();
+        }
+
+        function fitStage() {
+          if (stageMode === "app") {
+            var rect = stage.getBoundingClientRect();
+            var availW = rect.width - 32;
+            var availH = rect.height - 32;
+            var scale = Math.max(0.2, Math.min(availW / APP_SIZE.width, availH / APP_SIZE.height, 1));
+            // 用 transform 縮放（不用 zoom）：iframe 內點擊命中位置才準
+            device.style.transform = "scale(" + scale + ")";
+            deviceFit.style.width = APP_SIZE.width * scale + "px";
+            deviceFit.style.height = APP_SIZE.height * scale + "px";
+          } else {
+            device.style.transform = "";
+            deviceFit.style.width = "";
+            deviceFit.style.height = "";
+          }
+          updateWidthLabel();
+        }
+
+        function breakpointLabel(width) {
+          var list = (config.webBreakpoints || [
+            { min: 0, label: "手機版" },
+            { min: 641, label: "平板版" },
+            { min: 1100, label: "桌機版" },
+          ]).slice().sort(function (a, b) { return a.min - b.min; });
+          var label = list.length ? list[0].label : "";
+          list.forEach(function (bp) {
+            if (width >= bp.min) label = bp.label;
+          });
+          return label;
+        }
+
+        function updateWidthLabel() {
+          if (stageMode !== "web") {
+            widthLabel.hidden = true;
+            return;
+          }
+          // 量畫面本身的寬（有 ?w= 模擬寬度時＝模擬寬度，但不超過畫布）
+          var w = Math.round(screen.getBoundingClientRect().width || stage.clientWidth);
+          widthLabel.hidden = false;
+          widthLabel.textContent = "目前 " + w + "px · " + breakpointLabel(w) + (simW ? "（模擬寬度）" : "");
+          widthLabel.setAttribute("data-wf-width", String(w));
+        }
+
+        function applySimWidth() {
+          stage.classList.toggle("is-sim-width", !!simW);
+          if (simW) stage.style.setProperty("--sim-w", simW + "px");
+          else stage.style.removeProperty("--sim-w");
+          fitStage();
+        }
+        applySimWidth();
+
+        /* ---------- 檢視角色 ---------- */
+        function roleList() {
+          var fixed = (map && map.ROLES) || [];
+          return fixed.length ? fixed : pageRoleList;
+        }
+        /** 依角色清單更新上方列切換；目前角色不在清單裡就換成第一個。回傳角色是否改變 */
+        function renderRoleSwitch() {
+          var list = roleList();
+          var before = currentRole;
+          roleSwitch.hidden = !list.length;
+          if (!list.length) return false;
+          if (list.indexOf(currentRole) < 0) currentRole = list[0];
+          roleSelect.innerHTML = "";
+          list.forEach(function (r) {
+            var o = document.createElement("option");
+            o.value = r;
+            o.textContent = r;
+            roleSelect.appendChild(o);
+          });
+          roleSelect.value = currentRole;
+          return before !== currentRole;
+        }
+        function postRole() {
+          layers.forEach(function (l) {
+            try { if (l.frame && l.frame.contentWindow) l.frame.contentWindow.postMessage({ wf: "role", role: currentRole }, "*"); } catch (err) {}
+          });
+        }
+        function setRole(r) {
+          currentRole = r || "";
+          renderRoleSwitch();
+          postRole();
+          var l = top();
+          writeLocation(currentCode, l ? l.params : {}, true);
+          renderPanel(currentCode);
+        }
+        roleSelect.addEventListener("change", function () { setRole(roleSelect.value); });
+        /** 內頁回報本頁用到的角色（ready／roles 訊息） */
+        function updatePageRoles(reported) {
+          if (reported.join("|") === pageRoleList.join("|")) return;
+          pageRoleList = reported;
+          if (renderRoleSwitch()) postRole();
+          renderPanel(currentCode);
+          var lr = top();
+          writeLocation(currentCode, lr ? lr.params : {}, true);
+        }
+
+        if (window.ResizeObserver) {
+          new ResizeObserver(fitStage).observe(stage);
+        } else {
+          window.addEventListener("resize", fitStage);
+        }
+
+        /* ---------- 左側選單 ---------- */
+        function chevron() {
+          var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("class", "menu__chevron");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.setAttribute("aria-hidden", "true");
+          var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", "M6 9l6 6 6-6");
+          path.setAttribute("fill", "none");
+          path.setAttribute("stroke", "currentColor");
+          path.setAttribute("stroke-width", "1.8");
+          svg.appendChild(path);
+          return svg;
+        }
+
+        function tagEl(text) {
+          var t = document.createElement("span");
+          t.className = "menu__tag";
+          t.textContent = text;
+          return t;
+        }
+
+        function menuItem(parent, code, pin) {
+          var s = map.spec(code);
+          if (!s || isHiddenDoc(code)) return;
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "menu__item" + (pin ? " menu__item--pin" : "");
+          btn.setAttribute("data-wf-p", s.p);
+          if (!s.hideCode) {
+            var c = document.createElement("span");
+            c.className = "menu__code";
+            c.textContent = s.p;
+            btn.appendChild(c);
+          }
+          var l = document.createElement("span");
+          l.className = "menu__label";
+          l.textContent = s.label;
+          btn.appendChild(l);
+          if (s.unplanned) {
+            btn.classList.add("is-unplanned");
+            btn.disabled = true;
+          } else {
+            btn.addEventListener("click", function () {
+              setPage(s.p, {}, { source: "menu" });
+              notesMode.onMenuPick(s.p); // 資訊備註模式：狀態頁碼＝直接選中對應區塊的那個狀態
+            });
+          }
+          // 尚未繪製的頁：顯示頁碼＋頁名＋灰色標籤「尚未繪製」，不可點
+          if (s.unplanned) {
+            var muted = tagEl("尚未繪製");
+            muted.classList.add("menu__tag--muted");
+            btn.appendChild(muted);
+            btn.title = s.p + " " + s.label + "（尚未繪製）";
+          } else if (s.tag) {
+            btn.appendChild(tagEl(s.tag));
+          }
+          parent.appendChild(btn);
+        }
+
+        function renderMenu() {
+          menu.innerHTML = "";
+          map.assertCoverage();
+          map.AREAS.forEach(function (area) {
+            if (area.pin) {
+              (area.pages || []).forEach(function (code) { menuItem(menu, code, true); });
+              var hr = document.createElement("hr");
+              hr.className = "menu__divider";
+              menu.appendChild(hr);
+              return;
+            }
+            var areaEl = document.createElement("details");
+            areaEl.className = "menu__area";
+            areaEl.setAttribute("data-wf-area", area.id);
+            areaEl.open = true;
+            var sum = document.createElement("summary");
+            sum.appendChild(chevron());
+            sum.appendChild(document.createTextNode(area.title));
+            if (area.tag) sum.appendChild(tagEl(area.tag));
+            areaEl.appendChild(sum);
+            if (!area.flows || !area.flows.length) {
+              var empty = document.createElement("p");
+              empty.className = "menu__empty";
+              empty.textContent = area.placeholder || "尚未規劃";
+              areaEl.appendChild(empty);
+            }
+            (area.flows || []).forEach(function (flow) {
+              var flowEl = document.createElement("details");
+              flowEl.className = "menu__flow";
+              flowEl.setAttribute("data-wf-flow", flow.id);
+              flowEl.open = true;
+              var fs = document.createElement("summary");
+              fs.appendChild(chevron());
+              fs.appendChild(document.createTextNode(flow.title));
+              if (flow.tag) fs.appendChild(tagEl(flow.tag));
+              flowEl.appendChild(fs);
+              (flow.pages || []).forEach(function (code) { menuItem(flowEl, code, false); });
+              areaEl.appendChild(flowEl);
+            });
+            menu.appendChild(areaEl);
+          });
+          notesMode.decorateMenu(); // 已拆區塊的頁：狀態頁碼縮排列在主頁碼底下
+        }
+
+        function highlightMenu(code) {
+          var s = map.spec(notesMode.menuCode(code));
+          if (!s) return;
+          var areaEl = menu.querySelector('[data-wf-area="' + s.area + '"]');
+          var flowEl = menu.querySelector('[data-wf-flow="' + s.flow + '"]');
+          if (areaEl) areaEl.open = true;
+          if (flowEl) flowEl.open = true;
+          var hit = null;
+          menu.querySelectorAll(".menu__item").forEach(function (item) {
+            var on = item.getAttribute("data-wf-p") === s.p;
+            item.classList.toggle("is-active", on);
+            if (on) hit = item;
+          });
+          if (hit && hit.scrollIntoView) hit.scrollIntoView({ block: "nearest" });
+        }
+
+        /* ---------- 右側工程標註 ---------- */
+        function el(tag, cls, text) {
+          var n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          return n;
+        }
+
+        function emptyLine(text) {
+          return el("p", "panel__empty", text);
+        }
+
+        /** 在 container（預設右側面板）加一個區塊；回傳該區塊。section＝四區之一時標題加 data-section（外殼依此上色） */
+        function block(title, extraHead, body, container, section) {
+          var sec = el("section", "panel__block");
+          var head = el("div", "panel__head");
+          var h = el("h3", "panel__block-title", title);
+          if (section) h.setAttribute("data-section", section);
+          head.appendChild(h);
+          if (extraHead) head.appendChild(extraHead);
+          sec.appendChild(head);
+          sec.appendChild(body);
+          (container || panel).appendChild(sec);
+          return sec;
+        }
+
+        function bulletNode(line) {
+          var li = el("li");
+          if (!line || typeof line !== "object") {
+            li.textContent = String(line == null ? "" : line);
+            return li;
+          }
+          if (line.label) {
+            li.appendChild(el("span", "panel__label", line.label + "："));
+          }
+          var text = line.text || line.page || line.api || line.href || "";
+          var href = "";
+          if (line.href) href = line.href;
+          else if (line.api && config.apiDocBase) href = config.apiDocBase + line.api;
+          var target = line.page ? map.spec(line.page) : null;
+          if (line.page && target && target.unplanned) {
+            // 指到尚未繪製的頁：只顯示文字，不做連結
+            li.appendChild(document.createTextNode(text));
+          } else if (line.page) {
+            var a = el("a", "", text);
+            a.href = "?p=" + encodeURIComponent(line.page);
+            a.addEventListener("click", function (e) {
+              e.preventDefault();
+              setPage(line.page, {}, { source: "flow" });
+            });
+            li.appendChild(a);
+          } else if (href) {
+            var ext = el("a", "", text);
+            ext.href = href;
+            ext.target = "_blank";
+            ext.rel = "noopener noreferrer";
+            li.appendChild(ext);
+          } else {
+            li.appendChild(document.createTextNode(text));
+          }
+          return li;
+        }
+
+        function hintCards(hints) {
+          var ul = el("ul", "panel__cards");
+          hints.forEach(function (hint) {
+            var li = el("li", "panel__card");
+            li.appendChild(el("h4", "panel__card-title", hint.title || ""));
+            li.appendChild(el("p", "panel__sub", (hint.inputsLabel || "輸入值") + "："));
+            var list = el("ul", "panel__bullets");
+            (hint.inputs || []).forEach(function (t) { list.appendChild(el("li", "", t)); });
+            li.appendChild(list);
+            var r = el("p", "panel__result");
+            r.appendChild(el("span", "panel__label", "結果："));
+            r.appendChild(document.createTextNode(hint.result || ""));
+            li.appendChild(r);
+            ul.appendChild(li);
+          });
+          return ul;
+        }
+
+        function applyPanelVisibility(hasContent) {
+          // Prototype 模式右側不放工程標註：開關與面板一律收起
+          if (!notesMode.isNotes()) hasContent = false;
+          if (!hasContent) {
+            panelToggle.hidden = true;
+            panelToggle.setAttribute("aria-expanded", "false");
+            layout.classList.add("is-panel-closed");
+            return;
+          }
+          // 資訊備註模式：右側面板一律展開，不提供收合開關（開關由 shell-saas.css 隱藏）
+          prefs.panelClosed = false;
+          panelToggle.hidden = true;
+          panelToggle.setAttribute("aria-expanded", "true");
+          layout.classList.remove("is-panel-closed");
+        }
+
+        // 右側工程標註只有四區，順序固定：前端驗證 → 前端互動 → 顯示規則 → API；最後是測試值情境
+        var NOTE_TITLES = ["前端驗證", "前端互動", "顯示規則", "API"];
+
+        /** 取出某一區的條目（同名卡合併，依原順序串接） */
+        function noteLines(features, title) {
+          var lines = [];
+          features.forEach(function (card) {
+            if (String(card.title || "").trim() !== title) return;
+            if (card.bullets && card.bullets.length) lines = lines.concat(card.bullets);
+            else if (card.body) lines.push(card.body);
+          });
+          return lines;
+        }
+
+        function bulletList(lines) {
+          var list = el("ul", "panel__bullets");
+          lines.forEach(function (b) { list.appendChild(bulletNode(b)); });
+          return list;
+        }
+
+        /** 前端驗證區：先列本頁用到的欄位（點了跳 G1 該欄位），再列本頁其他送出前檢查 */
+        function validationBody(fieldNotes, lines) {
+          var wrap = el("div", "");
+          if (fieldNotes.length) {
+            var chips = el("div", "panel__chips");
+            fieldNotes.forEach(function (n) {
+              var chip = el("button", "panel__chip", n.label);
+              chip.type = "button";
+              chip.addEventListener("click", function () { goDoc(n.id); });
+              chips.appendChild(chip);
+            });
+            wrap.appendChild(chips);
+          }
+          if (lines.length) wrap.appendChild(bulletList(lines));
+          return wrap;
+        }
+
+        /**
+         * 把四區標註畫進 container（整頁標註、資訊備註的區塊狀態卡共用）。
+         * fieldNotes＝本頁用到的欄位（前端驗證區最上方列出，點了跳 G1）。回傳有沒有畫出任何一區。
+         */
+        function featureBlocks(container, features, fieldNotes) {
+          var drew = false;
+          NOTE_TITLES.forEach(function (t) {
+            var lines = noteLines(features, t);
+            if (t === "前端驗證") {
+              if (!lines.length && !fieldNotes.length) return;
+              var all = null;
+              if (fieldNotes.length) {
+                all = el("button", "panel__textlink", "全站規則");
+                all.type = "button";
+                all.addEventListener("click", function () { goDoc(); });
+              }
+              block(t, all, validationBody(fieldNotes, lines), container, t);
+              drew = true;
+              return;
+            }
+            if (lines.length) {
+              block(t, null, bulletList(lines), container, t);
+              drew = true;
+            }
+          });
+          return drew;
+        }
+
+        function renderPanel(code) {
+          var s = map.spec(code);
+          panel.innerHTML = "";
+          if (!s) return applyPanelVisibility(false);
+          // 資訊備註模式接點：Prototype 模式清空；已拆區塊的頁由 notes-mode.js 畫區塊面板
+          var handled = notesMode.renderPanel(panel, code);
+          if (handled === "done") return;
+          var features = map.featuresFor(code);
+          var hints = map.hintsFor(code);
+          var fieldNotes = fieldRulesOn() && rules.notesFor ? rules.notesFor(code) : [];
+          var hasContent = features.length + hints.length + fieldNotes.length > 0;
+          // 資訊備註模式、還沒拆區塊的頁：面板照常打開，上方加提示（沒有任何標註也顯示提示）
+          var fallback = handled === "fallback";
+          applyPanelVisibility(hasContent || fallback);
+          if (!hasContent) {
+            if (fallback) {
+              panel.appendChild(emptyLine("這頁還沒有工程標註。"));
+              notesMode.fallbackNotice(panel);
+            }
+            return;
+          }
+
+          var title = el("h2", "panel__title");
+          if (!s.hideCode) title.appendChild(el("span", "panel__code", s.p));
+          title.appendChild(document.createTextNode(s.label));
+          panel.appendChild(title);
+
+          featureBlocks(panel, features, fieldNotes);
+
+          block("測試值情境", null, hints.length ? hintCards(hints) : emptyLine("本頁沒有需要填的測試值。"));
+          if (fallback) notesMode.fallbackNotice(panel);
+        }
+
+        function goDoc(fieldId) {
+          var target = null;
+          Object.keys(map.PAGES).forEach(function (c) {
+            if (!target && map.PAGES[c].file === "field-rules.html") target = c;
+          });
+          if (target) setPage(target, fieldId ? { field: fieldId } : {}, { source: "flow" });
+        }
+
+        /* ---------- 換頁與返回堆疊 ---------- */
+        function frameSrc(fileKey, code, params) {
+          var q = paramsToQuery(params);
+          q.set("p", code);
+          if (currentRole) q.set("role", currentRole); // 內頁一載入就照目前角色顯示
+          if (noMotion) q.set("motion", "0"); // 內頁也關閉動態
+          var hash = params && params.field ? "#" + encodeURIComponent(params.field) : "";
+          return fileKey + "?" + q.toString() + hash;
+        }
+
+        function newFrame() {
+          var f = document.createElement("iframe");
+          f.className = "wf-layer";
+          f.title = "線框畫面";
+          return f;
+        }
+
+        function top() {
+          return layers[layers.length - 1];
+        }
+
+        function animOn(transition) {
+          return !noMotion && stageMode === "app" && (transition === "push" || transition === "cover");
+        }
+
+        /** 讓最上層以外、看不到的層隱藏；超過 MAX_LIVE 的舊層移除 iframe（退回時重新載入） */
+        function settleLayers() {
+          layers.forEach(function (l, i) {
+            if (!l.frame) return;
+            var isTop = i === layers.length - 1;
+            l.frame.className = "wf-layer" + (isTop ? "" : " is-under");
+            if (!isTop && i < layers.length - MAX_LIVE) {
+              l.frame.remove();
+              l.frame = null;
+            }
+          });
+        }
+
+        /** 疊一層新頁（push／cover／none） */
+        function pushLayer(code, fileKey, params, transition) {
+          var below = top();
+          var f = newFrame();
+          var layer = { frame: f, code: code, fileKey: fileKey, params: params, transition: transition };
+          layers.push(layer);
+          frame = f;
+          var anim = animOn(transition);
+          if (anim) f.classList.add("is-enter-" + transition);
+          screen.appendChild(f);
+          f.src = frameSrc(fileKey, code, params);
+          if (!anim) {
+            settleLayers();
+            return;
+          }
+          var started = false;
+          function start() {
+            if (started || layer.frame !== f) return;
+            started = true;
+            void f.offsetWidth;
+            f.classList.add("is-in");
+            if (below && below.frame && transition === "push") below.frame.classList.add("is-behind");
+            window.setTimeout(settleLayers, PAGE_MS + 20);
+          }
+          f.addEventListener("load", start, { once: true });
+          window.setTimeout(start, 700); // 載入太慢也照樣推入
+        }
+
+        /** 退回到第 index 層（移除它上面的所有層）；leave＝退場方向 */
+        function popTo(index, leave) {
+          var leaving = layers.slice(index + 1);
+          var target = layers[index];
+          layers = layers.slice(0, index + 1);
+          var s = map.spec(target.code);
+          if (s) setStageMode(effectiveDevice(s));
+          if (!target.frame) {
+            target.frame = newFrame();
+            screen.insertBefore(target.frame, leaving[0] ? leaving[0].frame : null);
+            target.frame.src = frameSrc(target.fileKey, target.code, target.params);
+          }
+          frame = target.frame;
+          currentCode = target.code;
+          currentFile = target.fileKey;
+          highlightMenu(currentCode);
+          renderPanel(currentCode);
+          writeLocation(currentCode, target.params, true);
+          var topLeaving = leaving[leaving.length - 1];
+          leaving.slice(0, -1).forEach(function (l) { if (l.frame) l.frame.remove(); });
+          target.frame.className = "wf-layer";
+          if (!topLeaving || !topLeaving.frame) return;
+          var dir = leave || topLeaving.transition;
+          if (!animOn(dir)) {
+            topLeaving.frame.remove();
+            return;
+          }
+          if (dir === "push") {
+            // 底下那頁從左邊滑回原位
+            target.frame.style.transition = "none";
+            target.frame.classList.add("is-behind");
+            void target.frame.offsetWidth;
+            target.frame.style.transition = "";
+            target.frame.classList.remove("is-behind");
+            target.frame.classList.add("is-back");
+          }
+          topLeaving.frame.classList.add("is-leave-" + dir);
+          window.setTimeout(function () {
+            topLeaving.frame.remove();
+            if (target.frame) target.frame.className = "wf-layer";
+          }, PAGE_MS + 20);
+        }
+
+        /** 沒有下一層可退時：在底下補一層備援頁，再退回去 */
+        function popToFallback(fallbackCode, leave) {
+          var s = map.spec(resolveCode(fallbackCode));
+          if (!s) return;
+          var f = newFrame();
+          var fileKey = pageBase() + s.file;
+          layers.unshift({ frame: f, code: s.p, fileKey: fileKey, params: {}, transition: "none" });
+          screen.insertBefore(f, screen.firstChild);
+          f.className = "wf-layer is-under";
+          f.src = frameSrc(fileKey, s.p, {});
+          popTo(0, leave || (top() && top().transition !== "none" ? top().transition : "push"));
+        }
+
+        function goBack(fallback) {
+          if (layers.length > 1) {
+            popTo(layers.length - 2);
+            return;
+          }
+          var s = map.spec(currentCode);
+          popToFallback(fallback || (s ? flowStart(s.flow) : "") || defaultPage(), "push");
+        }
+
+        function closeTask(fallback) {
+          // 找最近一次以 cover 進來的那層，退到它下面
+          for (var i = layers.length - 1; i >= 1; i -= 1) {
+            if (layers[i].transition === "cover") {
+              popTo(i - 1, "cover");
+              return;
+            }
+          }
+          if (layers.length > 1) {
+            popTo(layers.length - 2, "cover");
+            return;
+          }
+          var s = map.spec(currentCode);
+          popToFallback(fallback || (s ? flowStart(s.flow) : "") || defaultPage(), "cover");
+        }
+
+        function setPage(code, params, opts) {
+          opts = opts || {};
+          params = params || {};
+          var s = map.spec(resolveCode(code));
+          if (!s) return;
+          var nextCode = s.p;
+          var fileKey = pageBase() + s.file;
+
+          var reset = opts.source === "menu" || opts.source === "boot" || !!opts.fromPopstate || !layers.length;
+          var cross = !!currentCode && currentCode !== nextCode && familyOf(currentCode) !== familyOf(nextCode);
+          var explicit = !!opts.transition;
+          var stackIt = !reset && !opts.replace && !opts.noLoad && !opts.back && (cross || explicit);
+          currentCode = nextCode;
+
+          setStageMode(effectiveDevice(s));
+          highlightMenu(nextCode);
+          renderPanel(nextCode);
+          if (!opts.fromPopstate) writeLocation(nextCode, params, !!opts.replace);
+
+          if (reset) {
+            // 清空堆疊：只留最底下那個 iframe
+            var keptFile = layers.length ? (layers[0].frame ? layers[0].fileKey : "") : currentFile;
+            var keep = layers.length ? (layers[0].frame || newFrame()) : frame;
+            layers.forEach(function (l) { if (l.frame && l.frame !== keep) l.frame.remove(); });
+            if (!keep.parentElement) screen.appendChild(keep);
+            keep.className = "wf-layer";
+            layers = [{ frame: keep, code: nextCode, fileKey: keptFile, params: params, transition: "none" }];
+            frame = keep;
+            currentFile = keptFile;
+          } else if (stackIt) {
+            currentFile = fileKey;
+            pushLayer(nextCode, fileKey, params, opts.transition || "push");
+            return;
+          }
+
+          var layer = top();
+          layer.code = nextCode;
+          layer.params = params;
+          if (opts.noLoad) {
+            currentFile = fileKey;
+            layer.fileKey = fileKey;
+            return;
+          }
+          if (fileKey !== currentFile || layer.fileKey !== fileKey) {
+            currentFile = fileKey;
+            layer.fileKey = fileKey;
+            frame.src = frameSrc(fileKey, nextCode, params);
+          } else {
+            post({ wf: "apply", code: nextCode, params: params, source: opts.source || "flow" });
+          }
+        }
+
+        /* ---------- 內頁訊息 ---------- */
+        window.addEventListener("message", function (event) {
+          if (event.source !== frame.contentWindow) return;
+          var msg = event.data;
+          if (!msg || typeof msg !== "object" || !msg.wf) return;
+
+          // 資訊備註模式：框選、選取、填值／點擊的訊息交給 notes-mode.js
+          if (msg.wf === "notes") {
+            notesMode.onMessage(msg);
+            return;
+          }
+          // 資訊備註模式不換頁：擋掉內頁自己送來的換頁（含切狀態期間、填值／點擊觸發的；文件頁除外）
+          if (/^(go|goCode|goBack|close)$/.test(msg.wf) && !notesMode.allowNav()) return;
+
+          if (msg.wf === "ready" || msg.wf === "roles") updatePageRoles(msg.roles || []);
+          if (msg.wf === "roles") return;
+          if (msg.wf === "ready") {
+            notesMode.onReady(); // 內頁載入完成：補送模式與區塊狀態、接著跑待做的填值／點擊
+            if (map.fileNameOf(msg.file) !== map.fileNameOf(currentFile)) {
+              // 內頁自己用一般連結換了檔：殼層跟上，不重載
+              var s = map.specFromFile(msg.file);
+              if (s) setPage(s.p, {}, { source: "flow", noLoad: true });
+              if (s && msg.code !== s.p) post({ wf: "apply", code: s.p, params: {}, source: "boot" });
+            } else if (msg.code && msg.code !== currentCode) {
+              // 載入途中又切了狀態：補送一次
+              post({ wf: "apply", code: currentCode, params: readLocation().params, source: "boot" });
+            }
+            return;
+          }
+          if (msg.wf === "go") {
+            var target = map.specFromFile(msg.file);
+            // 換到一份 HTML＝換一頁：一律疊新的一層（預設 push），即使是同一份檔帶不同參數
+            if (target) setPage(target.p, msg.params || {}, { source: "flow", transition: msg.transition || "push" });
+            return;
+          }
+          if (msg.wf === "goCode") {
+            setPage(msg.code, msg.params || {}, { source: msg.source || "flow", replace: !!msg.replace, transition: msg.transition || "" });
+            return;
+          }
+          if (msg.wf === "goBack") {
+            goBack(msg.fallback || "");
+            return;
+          }
+          if (msg.wf === "close") {
+            closeTask(msg.fallback || "");
+            return;
+          }
+          if (msg.wf === "version") {
+            switchVersion(msg.id || "");
+          }
+        });
+
+        window.addEventListener("popstate", function () {
+          var loc = readLocation();
+          if ((loc.version || "") !== versionId && (loc.version === "" || snapshots[loc.version])) {
+            switchVersion(loc.version, { fromPopstate: true });
+            return;
+          }
+          setPage(loc.code || defaultPage(), loc.params, { fromPopstate: true, source: "menu" });
+        });
+
+        /* ---------- 版本 ---------- */
+        function loadScript(src) {
+          return new Promise(function (resolve, reject) {
+            var s = document.createElement("script");
+            s.src = src;
+            s.onload = function () { s.remove(); resolve(); };
+            s.onerror = function () { s.remove(); reject(new Error("讀不到 " + src)); };
+            document.head.appendChild(s);
+          });
+        }
+
+        /** 每個版本都要有快照：逐一探測 history/<id>/snapshot.js，載得到才列進下拉 */
+        function probeSnapshots() {
+          window.WfSnapshots = window.WfSnapshots || {};
+          var jobs = (changelog.versions || []).map(function (v) {
+            return loadScript("history/" + v.id + "/snapshot.js")
+              .then(function () { if (window.WfSnapshots[v.id]) snapshots[v.id] = true; })
+              .catch(function () {});
+          });
+          return Promise.all(jobs);
+        }
+
+        function renderVersions() {
+          versionSelect.innerHTML = "";
+          var cur = document.createElement("option");
+          cur.value = "";
+          cur.textContent = "目前版本（工作中）";
+          versionSelect.appendChild(cur);
+          (changelog.versions || []).forEach(function (v) {
+            if (!snapshots[v.id]) return;
+            var o = document.createElement("option");
+            o.value = v.id;
+            o.textContent = v.id + (v.title ? "｜" + v.title : "");
+            versionSelect.appendChild(o);
+          });
+          versionSelect.value = versionId;
+        }
+
+        function useVersionData(id) {
+          if (!id) {
+            map = latestMap;
+            rules = latestRules;
+            return Promise.resolve();
+          }
+          if (versionMaps[id]) {
+            map = versionMaps[id].map;
+            rules = versionMaps[id].rules;
+            return Promise.resolve();
+          }
+          var base = "history/" + id + "/assets/";
+          return loadScript(base + "page-map.js")
+            .then(function () {
+              return loadScript(base + "field-rules.js").catch(function () {});
+            })
+            .then(function () {
+              versionMaps[id] = { map: window.WfPageMap, rules: window.WfFieldRules || null };
+              // 全域物件還原成目前版本，快照只存在 versionMaps
+              window.WfPageMap = latestMap;
+              window.WfFieldRules = latestRules;
+              map = versionMaps[id].map;
+              rules = versionMaps[id].rules;
+            });
+        }
+
+        function switchVersion(id, opts) {
+          opts = opts || {};
+          if (id && !snapshots[id]) id = "";
+          var keepCode = currentCode;
+          useVersionData(id)
+            .then(function () {
+              versionId = id;
+            })
+            .catch(function () {
+              versionId = "";
+              map = latestMap;
+              rules = latestRules;
+            })
+            .then(function () {
+              currentFile = "";
+              renderVersions();
+              renderMenu();
+              var loc = readLocation();
+              var code = opts.fromPopstate ? loc.code : keepCode;
+              setPage(map.spec(code) ? code : defaultPage(), opts.fromPopstate ? loc.params : {}, {
+                source: "menu",
+                replace: !!opts.fromPopstate,
+                fromPopstate: !!opts.fromPopstate,
+              });
+            });
+        }
+
+        /* ---------- 上方列按鈕 ---------- */
+        function applyMenuPref() {
+          layout.classList.toggle("is-menu-closed", !!prefs.menuClosed);
+          menuToggle.setAttribute("aria-expanded", prefs.menuClosed ? "false" : "true");
+        }
+
+        menuToggle.addEventListener("click", function () {
+          prefs.menuClosed = !prefs.menuClosed;
+          savePrefs();
+          applyMenuPref();
+        });
+
+        panelToggle.addEventListener("click", function () {
+          prefs.panelClosed = !prefs.panelClosed;
+          savePrefs();
+          layout.classList.toggle("is-panel-closed", prefs.panelClosed);
+          panelToggle.setAttribute("aria-expanded", prefs.panelClosed ? "false" : "true");
+        });
+
+        versionSelect.addEventListener("change", function () {
+          switchVersion(versionSelect.value);
+        });
+
+        document.getElementById("project").addEventListener("dblclick", function () {
+          var s = map.spec(currentCode);
+          setPage((s && flowStart(s.flow)) || defaultPage(), {}, { source: "menu" });
+        });
+
+        // 焦點在殼層（例如剛點過左側選單）時按 ESC：轉交給內頁關最上層浮層
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") post({ wf: "key", key: "Escape" });
+        });
+
+        /* ---------- 資訊備註模式接點（交給 assets/notes-mode.js；殼層內部變數不外露） ---------- */
+        notesMode.install({
+          map: function () { return map; },
+          versionId: function () { return versionId; },
+          currentCode: function () { return currentCode; },
+          /** 每一層 iframe（最後一個＝最上層） */
+          frames: function () {
+            var list = layers.map(function (l) { return l.frame; }).filter(Boolean);
+            return list.length ? list : [frame];
+          },
+          /** 換到某頁碼（等同從選單點）；回傳 true＝重新載入了一份 HTML，false＝同一份檔只切狀態 */
+          go: function (code) {
+            // 記下每一層原本的網址：換完後最上層那一層的網址變了（或是新的一層）＝重新載入
+            var before = layers.map(function (l) { return { frame: l.frame, src: l.frame ? l.frame.getAttribute("src") : null }; });
+            setPage(code, {}, { source: "menu" });
+            var hit = before.filter(function (b) { return b.frame === frame; })[0];
+            return !hit || hit.src !== frame.getAttribute("src");
+          },
+          /** 最上層整份重新導向到目前頁碼（不用 reload，免得瀏覽器還原表單填過的值）；回傳有沒有做 */
+          reloadTop: function () {
+            var l = top();
+            if (!l || !l.frame) return false;
+            var url = frameSrc(l.fileKey, currentCode, l.params);
+            try {
+              l.frame.contentWindow.location.replace(url);
+            } catch (err) {
+              l.frame.src = url;
+            }
+            return true;
+          },
+          /** 對最上層以「從選單點進來」重套目前頁碼（重新導向載完後用） */
+          reapply: function () {
+            var l = top();
+            post({ wf: "apply", code: currentCode, params: l ? l.params : {}, source: "menu" });
+          },
+          renderPanel: function () { renderPanel(currentCode); },
+          refresh: function () {
+            renderPanel(currentCode);
+            highlightMenu(currentCode);
+          },
+          rewriteLocation: function () {
+            var l = top();
+            writeLocation(currentCode, l ? l.params : {}, true);
+          },
+          openPanel: function () {
+            prefs.panelClosed = false;
+            savePrefs();
+          },
+          setPanelVisible: applyPanelVisibility,
+          block: block,
+          featureBlocks: featureBlocks,
+          hintCards: hintCards,
+          goDoc: goDoc,
+        });
+
+        /* ---------- 對外（除錯與自動化測試用） ---------- */
+        window.WfShell = {
+          goCode: function (code, params) { setPage(code, params || {}, { source: "flow" }); },
+          current: function () { return { code: currentCode, version: versionId, mode: stageMode, view: notesMode.isNotes() ? "notes" : "prototype" }; },
+          /** 切換檢視模式："prototype"｜"notes" */
+          setView: function (m) { notesMode.setMode(m); },
+          /** 資訊備註自檢：await WfShell.selfCheck("A1") → { checked, misses }（見 notes-mode.js） */
+          selfCheck: function (prefix) { return notesMode.selfCheck(prefix); },
+          back: function () { goBack(""); },
+          close: function () { closeTask(""); },
+          layers: function () { return layers.map(function (l) { return { code: l.code, transition: l.transition, live: !!l.frame }; }); },
+          frame: function () { return frame; },
+          role: function () { return currentRole; },
+          setRole: setRole,
+          /** 模擬寬度（0＝取消，畫布多寬就多寬） */
+          setWidth: function (w) { simW = Math.max(0, parseInt(w, 10) || 0); if (simW && simW < 320) simW = 320; applySimWidth(); var l = top(); if (l) writeLocation(currentCode, l.params, true); },
+          switchVersion: switchVersion,
+          setPanels: function (menuOpen, panelOpen) {
+            prefs.menuClosed = !menuOpen;
+            prefs.panelClosed = !panelOpen;
+            savePrefs();
+            applyMenuPref();
+            renderPanel(currentCode);
+          },
+        };
+
+        /** 依 AREAS 載入各模組的資訊備註區塊資料 assets/region-notes/<模組>.js（文件區不載；檔案不存在就略過） */
+        function loadRegionNotes() {
+          var jobs = (latestMap.AREAS || []).filter(function (a) { return !a.pin && /^[A-Z]$/.test(a.id); }).map(function (a) {
+            return loadScript("assets/region-notes/" + a.id + ".js").catch(function () {});
+          });
+          return Promise.all(jobs);
+        }
+
+        /* ---------- 開機 ---------- */
+        applyMenuPref();
+        Promise.all([probeSnapshots(), loadRegionNotes()]).then(function () {
+          var loc = readLocation();
+          if (loc.version && snapshots[loc.version]) {
+            versionId = loc.version;
+          }
+          return useVersionData(versionId).catch(function () {
+            versionId = "";
+            map = latestMap;
+            rules = latestRules;
+          });
+        }).then(function () {
+          var loc = readLocation();
+          renderVersions();
+          renderMenu();
+          renderRoleSwitch();
+          setPage(loc.code || defaultPage(), loc.params, { replace: true, source: "boot" });
+        });
+      })();
+    </script>
+  </body>
+</html>

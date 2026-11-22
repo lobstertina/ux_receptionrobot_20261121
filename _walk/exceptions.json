@@ -1,0 +1,12 @@
+{
+  "title": "A1 報到例外走查",
+  "url": "index.html?p=A1.2&menu=0&notes=0",
+  "viewport": { "width": 1240, "height": 800 },
+  "steps": [
+    { "op": "輸入 0900000000 查詢", "do": [{ "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"9\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": ".keypad__key >> text=\"0\"" }, { "click": "#btn-search" }, { "wait": 1500 }], "expect": "查無會議", "check": { "page": "A1.2-2" } },
+    { "op": "點「改用要找的人名字」", "do": [{ "click": "text=改用要找的人名字" }, { "wait": 800 }], "expect": "進找人通知頁", "check": { "page": "A1.5" } },
+    { "op": "不填姓名直接通知", "do": [{ "click": "#btn-notify" }, { "wait": 500 }], "expect": "姓名欄錯誤", "check": { "page": "A1.5", "text": { "sel": "form", "has": "請輸入您的姓名" } } },
+    { "op": "選陳建宏、填姓名後通知", "do": [{ "click": "[aria-label=\"選擇陳建宏\"]" }, { "fill": "#vname", "value": "王小明" }, { "click": "#btn-notify" }, { "wait": 1500 }], "expect": "進通知等候頁", "check": { "page": "A1.4" } },
+    { "op": "切到通知送出失敗，改請行政協助", "do": [{ "goto": "A1.3-3" }, { "wait": 800 }, { "click": "text=改請行政同事協助" }, { "wait": 800 }], "expect": "進已改請行政協助", "check": { "page": "A1.4-2" } }
+  ]
+}

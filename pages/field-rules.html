@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-Hant" class="catalog-root">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G1 欄位驗證規則</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <div class="catalog">
+      <header class="catalog__head">
+        <p class="catalog__kicker">全站通用</p>
+        <h1 class="catalog__title">欄位驗證規則</h1>
+        <p class="catalog__meta" id="rules-modified"></p>
+        <div class="catalog__search">
+          <label class="catalog__search-label" for="rules-q">搜尋關鍵字</label>
+          <input id="rules-q" class="catalog__search-input" type="search" placeholder="欄位名稱、錯誤訊息、頁碼…" autocomplete="off" />
+        </div>
+      </header>
+      <nav class="catalog__index" aria-label="欄位索引">
+        <p class="catalog__index-title">索引</p>
+        <ul class="catalog__index-list" id="rules-index"></ul>
+      </nav>
+      <main class="catalog__main" id="rules-main"></main>
+    </div>
+
+    <script src="../assets/page-map.js"></script>
+    <script src="../assets/field-rules.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script>
+      (function () {
+        // 資料全部來自 assets/field-rules.js（FIELDS）；本頁只負責排版、搜尋、索引與跳頁
+        var catalog = window.WfFieldRules;
+        var map = window.WfPageMap;
+        var fields = catalog ? catalog.listedFields() : [];
+        var indexEl = document.getElementById("rules-index");
+        var mainEl = document.getElementById("rules-main");
+        var searchEl = document.getElementById("rules-q");
+        var emptyEl = document.createElement("p");
+        emptyEl.className = "catalog__empty";
+        emptyEl.textContent = fields.length ? "沒有符合的欄位規則。" : "還沒有登記任何欄位。到 assets/field-rules.js 的 FIELDS 新增。";
+        emptyEl.hidden = !!fields.length;
+        mainEl.appendChild(emptyEl);
+
+        function slashDate(d) {
+          return String(d || "").replace(/-/g, "/");
+        }
+
+        // 頁首「最後修改」＝所有欄位裡最新的一天
+        var latest = fields.map(function (f) { return f.modified || ""; }).sort().pop();
+        document.getElementById("rules-modified").textContent = latest ? "最後修改 " + slashDate(latest) : "";
+
+        function pageLabel(code) {
+          var spec = map && map.spec ? map.spec(code) : null;
+          return spec ? spec.p + " " + spec.label : code;
+        }
+
+        function el(tag, cls, text) {
+          var n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          return n;
+        }
+
+        function heading(text) {
+          return el("h3", "spec__h", text);
+        }
+
+        function bullets(list) {
+          var ul = el("ul", "spec__bullets");
+          (list || []).forEach(function (item) {
+            ul.appendChild(el("li", "", catalog.lineText(item)));
+          });
+          return ul;
+        }
+
+        /** 輸入框預覽：用線框元件（.field／.input／.textarea）畫出這個欄位，value 有給就填入；err 有給就畫錯誤態 */
+        function preview(field, value, err) {
+          var widget = field.widget || {};
+          var wrap = el("div", "spec__preview");
+          var box = el("div", err ? "field is-error" : "field");
+          box.appendChild(el("span", "field__label", widget.label || field.title));
+          var input;
+          if (widget.type === "textarea") {
+            input = el("textarea", "textarea");
+          } else {
+            input = el("input", "input");
+            input.type = widget.type || "text";
+          }
+          input.tabIndex = -1;
+          input.setAttribute("aria-hidden", "true");
+          if (field.placeholder) input.placeholder = field.placeholder;
+          if (widget.maxlength) input.maxLength = widget.maxlength;
+          if (value != null) input.value = value;
+          box.appendChild(input);
+          if (err && err.message) box.appendChild(el("p", "field__error", err.message));
+          wrap.appendChild(box);
+          return wrap;
+        }
+
+        function goUsedPage(code) {
+          if (window.WfProto && WfProto.goCode) WfProto.goCode(code);
+        }
+
+        fields.forEach(function (field) {
+          // 左側索引
+          var li = el("li");
+          li.setAttribute("data-field", field.id);
+          var a = el("a", "", field.title);
+          a.href = "#" + field.id;
+          a.addEventListener("click", function (e) {
+            e.preventDefault();
+            scrollToField(field.id, true);
+          });
+          li.appendChild(a);
+          indexEl.appendChild(li);
+
+          // 右側規格卡
+          var article = el("article", "spec");
+          article.id = field.id;
+          article.setAttribute("data-field", field.id);
+          article.setAttribute("tabindex", "-1");
+
+          var banner = el("div", "spec__banner");
+          var name = el("h2", "spec__name");
+          var anchor = el("a", "spec__anchor", field.title);
+          anchor.href = "#" + field.id;
+          anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            scrollToField(field.id, true);
+          });
+          name.appendChild(anchor);
+          banner.appendChild(name);
+          if (field.modified) banner.appendChild(el("p", "spec__modified", "最後修改 " + slashDate(field.modified)));
+          if (field.keywords && field.keywords.length) banner.appendChild(el("p", "spec__keywords", "搜尋關鍵字：" + field.keywords.join("、")));
+          article.appendChild(banner);
+
+          var body = el("div", "spec__body");
+          if (catalog.hasPlaceholder(field)) {
+            body.appendChild(heading("提示字文案"));
+            body.appendChild(preview(field));
+          }
+          body.appendChild(heading("聚焦時"));
+          body.appendChild(bullets(field.focus));
+          body.appendChild(heading("輸入中"));
+          body.appendChild(bullets(field.typing));
+          body.appendChild(heading("點「送出」按鈕檢查"));
+          body.appendChild(bullets(field.submit));
+          if (field.errors && field.errors.length) {
+            body.appendChild(el("hr", "spec__hr"));
+            body.appendChild(heading("錯誤顯示方式"));
+            field.errors.forEach(function (err) {
+              var block = el("div", "spec__error");
+              // sample＝輸入值；"" 代表空白
+              block.appendChild(preview(field, err.sample != null ? err.sample : err.input, err));
+              body.appendChild(block);
+            });
+          }
+          article.appendChild(body);
+
+          var uses = el("div", "spec__uses");
+          uses.appendChild(el("h3", "spec__uses-title", "使用頁面"));
+          var chips = el("div", "spec__chips");
+          (field.usedOn || []).forEach(function (code) {
+            var chip = el("a", "spec__chip", pageLabel(code));
+            chip.href = "#";
+            chip.addEventListener("click", function (e) {
+              e.preventDefault();
+              goUsedPage(code);
+            });
+            chips.appendChild(chip);
+          });
+          uses.appendChild(chips);
+          article.appendChild(uses);
+          mainEl.appendChild(article);
+        });
+
+        /* ---------- 搜尋 ---------- */
+        function applyFilter(query) {
+          var q = String(query || "").trim().toLowerCase();
+          var shown = 0;
+          fields.forEach(function (field) {
+            var match = !q || catalog.searchText(field).indexOf(q) !== -1;
+            var indexItem = indexEl.querySelector('[data-field="' + field.id + '"]');
+            var card = document.getElementById(field.id);
+            if (indexItem) indexItem.hidden = !match;
+            if (card) card.hidden = !match;
+            if (match) shown += 1;
+          });
+          if (fields.length) emptyEl.hidden = shown > 0;
+          window.requestAnimationFrame(syncIndexFromScroll);
+        }
+
+        function visibleCards() {
+          return Array.prototype.filter.call(mainEl.querySelectorAll("article.spec"), function (card) {
+            return !card.hidden;
+          });
+        }
+
+        /* ---------- 索引跟著捲動 ---------- */
+        var activeId = "";
+        var spyLock = false;
+        var spyLockTimer = null;
+
+        function markActive(id, opts) {
+          opts = opts || {};
+          if (!id) return;
+          indexEl.querySelectorAll("a").forEach(function (link) {
+            var on = link.getAttribute("href") === "#" + id;
+            link.classList.toggle("is-active", on);
+            if (on) link.setAttribute("aria-current", "true");
+            else link.removeAttribute("aria-current");
+          });
+          fields.forEach(function (field) {
+            var card = document.getElementById(field.id);
+            if (card) card.classList.toggle("is-target", !!(opts.card && field.id === id));
+          });
+          if (id === activeId) return;
+          activeId = id;
+          var activeLink = indexEl.querySelector('a[href="#' + id + '"]');
+          if (activeLink) {
+            var nav = document.querySelector(".catalog__index");
+            var linkBox = activeLink.getBoundingClientRect();
+            var navBox = nav.getBoundingClientRect();
+            if (linkBox.top < navBox.top + 8 || linkBox.bottom > navBox.bottom - 8) activeLink.scrollIntoView({ block: "nearest" });
+          }
+          if (opts.hash !== false && history.replaceState) history.replaceState(null, "", "#" + id);
+        }
+
+        function scrollToField(id, updateHash) {
+          var card = document.getElementById(id);
+          if (!card || card.hidden) return;
+          spyLock = true;
+          window.clearTimeout(spyLockTimer);
+          card.scrollIntoView({ block: "start" });
+          markActive(id, { hash: updateHash !== false, card: true });
+          spyLockTimer = window.setTimeout(function () {
+            spyLock = false;
+          }, 420);
+        }
+
+        function syncIndexFromScroll() {
+          if (spyLock) return;
+          var cards = visibleCards();
+          if (!cards.length) return;
+          if (mainEl.scrollTop <= 0) return markActive(cards[0].id);
+          if (mainEl.scrollTop + mainEl.clientHeight >= mainEl.scrollHeight - 2) return markActive(cards[cards.length - 1].id);
+          var cutoff = mainEl.getBoundingClientRect().top + 48;
+          var current = cards[0];
+          cards.forEach(function (card) {
+            if (card.getBoundingClientRect().top <= cutoff) current = card;
+          });
+          markActive(current.id);
+        }
+
+        searchEl.addEventListener("input", function () {
+          applyFilter(searchEl.value);
+        });
+        mainEl.addEventListener("scroll", syncIndexFromScroll, { passive: true });
+
+        // 右側工程標註點欄位名稱 → 殼層帶 field 參數進來，捲到該欄位
+        WfProto.registerPage({
+          defaultCode: "G1",
+          apply: function (code, ctx) {
+            var id = (ctx.params && ctx.params.field) || decodeURIComponent(String(location.hash || "").slice(1));
+            if (id) {
+              searchEl.value = "";
+              applyFilter("");
+              window.setTimeout(function () {
+                scrollToField(id, true);
+              }, 40);
+            } else {
+              var first = visibleCards()[0];
+              if (first) markActive(first.id, { hash: false });
+            }
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>
