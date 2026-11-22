@@ -1,3 +1,8 @@
+# ux_receptionrobot_20261121
+This is the project that I co-work with AI for the first time by using Claude and Figma
+
+---
+
 # 灰階線框殼層模板
 
 把多張灰階線框頁串成一個可點擊的原型：左邊是頁面選單、中間是畫布、右邊是工程標註，上方可以切換版本。
