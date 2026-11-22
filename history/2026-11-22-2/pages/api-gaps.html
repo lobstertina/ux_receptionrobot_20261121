@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G5 API 缺口清單</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <h1 class="doc__title">API 缺口清單</h1>
+      <p class="doc__lead">API 錯誤碼對帳找到的缺口與矛盾：畫面需要但規格沒有、或兩邊說法不同的地方。每條寫畫面先怎麼做與待後端確認的事。</p>
+      <div id="doc-root"></div>
+    </main>
+
+    <script src="../wireframe.config.js"></script>
+    <script src="../assets/page-map.js"></script>
+    <script src="../assets/doc-pages.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script src="../assets/doc-render.js"></script>
+    <script>
+      WfDocRender.render("apiGaps", document.getElementById("doc-root"), "G5");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G7 專案 UX 準則</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <h1 class="doc__title">專案 UX 準則</h1>
+      <p class="doc__lead">本案定下、跨頁都要照做的規則。新頁面先照這裡畫，改規則時一併更新用到的頁。</p>
+      <div id="doc-root"></div>
+    </main>
+
+    <script src="../wireframe.config.js"></script>
+    <script src="../assets/page-map.js"></script>
+    <script src="../assets/doc-pages.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script src="../assets/doc-render.js"></script>
+    <script>
+      WfDocRender.render("uxRules", document.getElementById("doc-root"), "G7");
+    </script>
+  </body>
+</html>

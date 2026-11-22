@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.2 報到查詢頁</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      .checkin-or { margin: 0; font-size: var(--fs-section); font-weight: 600; color: var(--g-700); }
+      .checkin-privacy { margin: 0; font-size: var(--fs-sub); color: var(--g-600); }
+      .checkin-form .input { font-size: var(--fs-title); }
+      .checkin-col { gap: var(--gap-group); }
+      .checkin-result { grid-template-columns: 1fr; }
+      .checkin-multi { display: flex; flex-direction: column; justify-content: center; gap: var(--gap-field); }
+      .checkin-multi .list-row { cursor: pointer; min-height: calc(var(--h-row) * 1.5); }
+      .checkin-multi .list-row__title { font-size: var(--fs-title); }
+    </style>
+  </head>
+  <body class="kiosk-page">
+    <div class="kiosk-wrap">
+      <div class="kiosk">
+        <div class="kiosk__top" data-note-region="top">
+          <h1 class="kiosk__title">報到：找到您的會議</h1>
+          <div class="seg" role="tablist" aria-label="語言" data-wf-tabs style="width: 160px">
+            <button type="button" class="seg__item" role="tab" aria-selected="true">中文</button>
+            <button type="button" class="seg__item" role="tab" aria-selected="false">EN</button>
+          </div>
+        </div>
+
+        <div class="kiosk__body" data-show-when="A1.2 A1.2-6">
+          <!-- 掃描邀請信條碼 -->
+          <div class="kiosk__col" data-note-region="scan">
+            <p class="kiosk__lead">把邀請信上的條碼對準鏡頭</p>
+            <button type="button" class="scan-box" id="scan" aria-label="條碼掃描畫面" data-wf-code="A1.3">
+              <span class="scan-box__frame" aria-hidden="true"></span>
+              <span class="scan-box__hint">對準後會自動辨識</span>
+            </button>
+          </div>
+
+          <!-- 或輸入手機號碼 -->
+          <div class="kiosk__col checkin-col" data-note-region="phone">
+            <p class="checkin-or">沒有條碼？輸入您的手機號碼</p>
+            <form class="form checkin-form" id="form-phone" novalidate>
+              <div class="field">
+                <label class="field__label" for="phone">手機號碼</label>
+                <input class="input" id="phone" type="tel" inputmode="numeric" placeholder="例：0912 345 678" data-wf-field="visitor-phone" readonly />
+              </div>
+            </form>
+            <div class="keypad" id="keypad">
+              <button type="button" class="keypad__key">1</button><button type="button" class="keypad__key">2</button><button type="button" class="keypad__key">3</button>
+              <button type="button" class="keypad__key">4</button><button type="button" class="keypad__key">5</button><button type="button" class="keypad__key">6</button>
+              <button type="button" class="keypad__key">7</button><button type="button" class="keypad__key">8</button><button type="button" class="keypad__key">9</button>
+              <button type="button" class="keypad__key" data-key="clear">清除</button><button type="button" class="keypad__key">0</button><button type="button" class="keypad__key" data-key="back" aria-label="刪除一碼">⌫</button>
+            </div>
+            <button type="submit" form="form-phone" class="btn btn--primary btn--block" id="btn-search">查詢會議</button>
+            <p class="checkin-privacy">手機號碼只用來查詢今天的會議，不會保存。</p>
+          </div>
+        </div>
+
+
+        <!-- 查詢結果：查無、多場、已取消、查詢失敗 -->
+        <div class="kiosk__body checkin-result" data-note-region="result" data-show-when="A1.2-2 A1.2-3 A1.2-4 A1.2-5">
+          <div class="empty empty--fill" data-show-when="A1.2-2">
+            <p class="empty__title empty__title--lg">查不到您今天的會議</p>
+            <p class="kiosk__lead">可能是用別的手機號碼預約，或邀請信不是今天的。</p>
+            <button type="button" class="btn btn--primary btn--kiosk" data-wf-code="A1.5">改用要找的人名字</button>
+            <button type="button" class="text-btn" data-wf-code="A1.2">重新查詢</button>
+          </div>
+          <div class="empty empty--fill" data-show-when="A1.2-4">
+            <p class="empty__title empty__title--lg">這場會議已取消</p>
+            <p class="kiosk__lead">原訂今天 15:00 與陳怡君（業務部）的會議已取消。</p>
+            <button type="button" class="btn btn--primary btn--kiosk" data-wf-code="A1.5">改用要找的人名字</button>
+            <button type="button" class="text-btn" data-wf-code="A1.2">重新查詢</button>
+          </div>
+          <div class="empty empty--fill" data-show-when="A1.2-5">
+            <p class="empty__title empty__title--lg">暫時查不到會議資料</p>
+            <p class="kiosk__lead">系統沒有回應，請再試一次。</p>
+            <button type="button" class="btn btn--primary btn--kiosk" data-wf-code="A1.2">再試一次</button>
+          </div>
+          <div class="checkin-multi" data-show-when="A1.2-3">
+            <p class="kiosk__lead">您今天有 2 場會議，請選擇這次要報到的那一場</p>
+            <ul class="list list--bordered">
+              <li class="list-row" role="button" tabindex="0" data-wf-code="A1.3" aria-label="選擇 15:00 星河會議室"><div class="list-row__main"><p class="list-row__title">15:00–16:00　7 樓 星河會議室</p><p class="list-row__sub">陳怡君（業務部）</p></div><span class="list-row__chevron" aria-hidden="true"></span></li>
+              <li class="list-row" role="button" tabindex="0" data-wf-code="A1.3" aria-label="選擇 16:30 銀河會議室"><div class="list-row__main"><p class="list-row__title">16:30–17:00　5 樓 銀河會議室</p><p class="list-row__sub">林志豪（產品部）</p></div><span class="list-row__chevron" aria-hidden="true"></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="kiosk__foot" data-note-region="foot">
+          <button type="button" class="text-btn" data-wf-code="A1.1">回首頁</button>
+          <button type="button" class="text-btn" id="btn-human" data-wf-toast="已通知行政人員，馬上有人來協助您">需要協助？找真人</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/field-rules.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script>
+      var phone = document.getElementById("phone");
+      document.getElementById("keypad").addEventListener("click", function (e) {
+        var key = e.target.closest(".keypad__key");
+        if (!key) return;
+        if (key.dataset.key === "clear") phone.value = "";
+        else if (key.dataset.key === "back") phone.value = phone.value.slice(0, -1);
+        else if (phone.value.replace(/\D/g, "").length < 10) phone.value += key.textContent;
+        phone.setAttribute("value", phone.value);
+        phone.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      WfProto.registerPage({
+        defaultCode: "A1.2",
+        apply: function (code, ctx) {
+          if (code === "A1.2-6") { phone.value = "0912"; phone.setAttribute("value", "0912"); WfProto.showFieldError(phone, "請輸入 09 開頭的 10 碼手機號碼"); }
+        },
+      });
+      WfProto.initForm({
+        form: "form-phone",
+        submitBtn: "btn-search",
+        fields: [
+          { id: "phone", rules: ["required", { test: function (v) { return /^09\d{8}$/.test(String(v).replace(/[\s-]/g, "")); }, message: "請輸入 09 開頭的 10 碼手機號碼" }] },
+        ],
+        loadingLabel: "查詢中",
+        delay: 700,
+        onSubmit: function (values) {
+          var v = String(values.phone).replace(/[\s-]/g, "");
+          if (v === "0900000000") return "A1.2-2";
+          if (v === "0911111111") return "A1.2-3";
+          if (v === "0922222222") return "A1.2-4";
+          if (v === "0933333333") return "A1.2-5";
+          return "A1.3";
+        },
+      });
+    </script>
+  </body>
+</html>

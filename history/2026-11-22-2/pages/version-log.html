@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G0 版本紀錄</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <h1 class="doc__title">版本紀錄</h1>
+      <p class="doc__lead">每個版本都有完整快照，可從上方版本下拉或下方按鈕切換查看。每條異動寫「頁碼 頁名：改了什麼（因為哪個決定）」。</p>
+      <div id="versions"></div>
+    </main>
+
+    <script>
+      /* 快照內開啟時（history/<id>/pages/），版本紀錄在 ../../changelog.js；工作版在 ../history/changelog.js */
+      (function () {
+        var inSnapshot = /\/history\/[^/]+\/pages\/[^/]*$/.test(location.pathname);
+        document.write('<script src="' + (inSnapshot ? "../../changelog.js" : "../history/changelog.js") + '"><\/script>');
+      })();
+    </script>
+    <script src="../assets/proto.js"></script>
+    <script>
+      (function () {
+        var root = document.getElementById("versions");
+        var versions = ((window.WfChangelog || {}).versions) || [];
+        if (!versions.length) {
+          root.innerHTML = '<div class="doc-empty">還沒有存過版本。要交給別人看之前執行 <code>node scripts/snapshot.mjs 2026-10-15 "客戶審閱版" "頁碼 頁名：改了什麼（因為哪個決定）"</code> 存第一版。</div>';
+        }
+        versions.forEach(function (v) {
+          var card = document.createElement("article");
+          card.className = "doc-card";
+          card.id = "v-" + v.id;
+          var head = document.createElement("div");
+          head.className = "doc-card__head";
+          var h = document.createElement("h2");
+          h.className = "doc-card__title";
+          h.textContent = v.id;
+          var meta = document.createElement("span");
+          meta.className = "doc-card__meta";
+          meta.textContent = [v.date, v.title].filter(Boolean).join("｜");
+          head.appendChild(h);
+          head.appendChild(meta);
+          card.appendChild(head);
+          if (v.changes && v.changes.length) {
+            var ul = document.createElement("ul");
+            v.changes.forEach(function (c) {
+              var li = document.createElement("li");
+              li.textContent = c;
+              ul.appendChild(li);
+            });
+            card.appendChild(ul);
+          }
+          var chips = document.createElement("div");
+          chips.className = "doc-chips";
+          var open = document.createElement("button");
+          open.type = "button";
+          open.className = "doc-chip";
+          open.textContent = "切換到此版本";
+          open.addEventListener("click", function () {
+            if (window.parent !== window) window.parent.postMessage({ wf: "version", id: v.id }, "*");
+          });
+          chips.appendChild(open);
+          card.appendChild(chips);
+          root.appendChild(card);
+        });
+        WfProto.registerPage({ defaultCode: "G0" });
+      })();
+    </script>
+  </body>
+</html>

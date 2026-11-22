@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.5 找人通知頁</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      .find-results .list-row { cursor: pointer; }
+      .find-results .list-row[aria-current="true"] { background: var(--g-100); }
+      .find-form .input { font-size: var(--fs-section); }
+    </style>
+  </head>
+  <body class="kiosk-page">
+    <div class="kiosk-wrap">
+      <div class="kiosk">
+        <div class="kiosk__top" data-note-region="top">
+          <h1 class="kiosk__title">沒關係，告訴我您要找誰</h1>
+        </div>
+
+        <form class="kiosk__body find-form" id="form-find" novalidate>
+          <!-- 搜尋要找的人 -->
+          <div class="kiosk__col" data-note-region="search">
+            <div class="field">
+              <label class="field__label" for="host">要找的人</label>
+              <input class="input" id="host" type="search" placeholder="例：陳怡君" value="陳" data-wf-field="host-name" />
+            </div>
+            <ul class="list list--bordered find-results" data-show-when="A1.5 A1.5-3">
+              <li class="list-row" role="button" tabindex="0" aria-label="選擇陳怡君" aria-current="true"><div class="list-row__main"><p class="list-row__title">陳怡君</p><p class="list-row__sub">業務部</p></div><span class="badge badge--soft">已選擇</span></li>
+              <li class="list-row" role="button" tabindex="0" aria-label="選擇陳建宏"><div class="list-row__main"><p class="list-row__title">陳建宏</p><p class="list-row__sub">財務部</p></div></li>
+            </ul>
+            <div class="empty" data-show-when="A1.5-2">
+              <p class="empty__title">找不到「陳小美」</p>
+              <p class="empty__desc">可以換個寫法再找，或請行政同事協助。</p>
+              <button type="button" class="btn btn--primary btn--sm" data-wf-code="A1.4-2">請行政同事協助</button>
+            </div>
+          </div>
+
+          <!-- 訪客資料與送出 -->
+          <div class="kiosk__col" data-note-region="visitor">
+            <div class="field">
+              <label class="field__label" for="vname">您的姓名</label>
+              <input class="input" id="vname" type="text" placeholder="例：王小明" data-wf-field="visitor-name" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="vcompany">公司名稱（選填）</label>
+              <input class="input" id="vcompany" type="text" placeholder="例：光年資訊" data-wf-field="visitor-company" />
+            </div>
+            <p class="notice notice--error" data-wf-form-error role="alert" hidden></p>
+            <button type="submit" class="btn btn--primary btn--block btn--kiosk" id="btn-notify">通知陳怡君</button>
+          </div>
+        </form>
+
+        <div class="kiosk__foot" data-note-region="foot">
+          <button type="button" class="text-btn" data-wf-code="A1.1">回首頁</button>
+          <button type="button" class="text-btn" data-wf-code="A1.4-2">需要協助？找真人</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/field-rules.js"></script>
+    <script src="../assets/proto.js"></script>
+    <script>
+      var host = document.getElementById("host");
+      var vname = document.getElementById("vname");
+      document.querySelectorAll(".find-results .list-row").forEach(function (row) {
+        row.addEventListener("click", function () {
+          document.querySelectorAll(".find-results .list-row").forEach(function (r) {
+            r.setAttribute("aria-current", r === row ? "true" : "false");
+            var b = r.querySelector(".badge"); if (b) b.remove();
+          });
+          var badge = document.createElement("span"); badge.className = "badge badge--soft"; badge.textContent = "已選擇"; row.appendChild(badge);
+          document.getElementById("btn-notify").textContent = "通知" + row.querySelector(".list-row__title").textContent;
+        });
+      });
+      WfProto.registerPage({
+        defaultCode: "A1.5",
+        apply: function (code, ctx) {
+          if (code === "A1.5-2") { host.value = "陳小美"; host.setAttribute("value", "陳小美"); }
+          if (code === "A1.5-3") { WfProto.showFieldError(vname, "請輸入您的姓名"); }
+        },
+      });
+      WfProto.initForm({
+        form: "form-find",
+        submitBtn: "btn-notify",
+        fields: [{ id: "vname", rules: [{ test: function (v) { return String(v).trim().length > 0; }, message: "請輸入您的姓名" }] }],
+        loadingLabel: "通知中",
+        delay: 700,
+        onSubmit: function () { return "A1.4"; },
+      });
+    </script>
+  </body>
+</html>

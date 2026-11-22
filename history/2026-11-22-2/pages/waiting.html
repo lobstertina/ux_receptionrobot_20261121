@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.4 通知等候頁</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      .wait-status .list-row__title { font-size: var(--fs-section); }
+      .wait-reply { margin: 0; font-size: var(--fs-title); font-weight: 700; color: var(--g-900); }
+      .wait-way .desc-list__value { font-size: var(--fs-section); }
+      .wait-actions { display: flex; flex-direction: column; gap: var(--gap-group); }
+    </style>
+  </head>
+  <body class="kiosk-page">
+    <div class="kiosk-wrap">
+      <div class="kiosk">
+        <div class="kiosk__top" data-note-region="top">
+          <h1 class="kiosk__title"><span data-show-when="A1.4">已通知陳怡君，請稍候</span><span data-show-when="A1.4-2">已改請行政同事協助，請稍候</span></h1>
+        </div>
+
+        <div class="kiosk__body">
+          <!-- 通知狀態 -->
+          <div class="kiosk__col" data-note-region="status">
+            <ul class="list list--bordered wait-status" data-show-when="A1.4">
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">通知已送出</p></div><span class="list-row__value">15:02</span></li>
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">陳怡君已讀</p></div><span class="list-row__value">15:03</span></li>
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">陳怡君回覆</p></div><span class="list-row__value">15:03</span></li>
+            </ul>
+            <p class="wait-reply" data-show-when="A1.4">「馬上下樓接您，請稍等 3 分鐘。」</p>
+            <ul class="list list--bordered wait-status" data-show-when="A1.4-2">
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">陳怡君 3 分鐘沒有回覆</p></div><span class="list-row__value">15:05</span></li>
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">已通知行政同事</p></div><span class="list-row__value">15:05</span></li>
+              <li class="list-row"><div class="list-row__main"><p class="list-row__title">行政同事回覆</p></div><span class="list-row__value">15:06</span></li>
+            </ul>
+            <p class="wait-reply" data-show-when="A1.4-2">「我是行政小周，馬上到大廳協助您。」</p>
+          </div>
+
+          <!-- 等候區與會議室怎麼走、等候時能做的事 -->
+          <div class="kiosk__col" data-note-region="way">
+            <dl class="desc-list desc-list--stacked wait-way">
+              <div class="desc-list__item"><dt class="desc-list__term">在哪裡等</dt><dd class="desc-list__value">大廳右側沙發區</dd></div>
+              <div class="desc-list__item"><dt class="desc-list__term">會議室怎麼走</dt><dd class="desc-list__value">搭右側電梯到 7 樓，出電梯左轉第二間「星河會議室」</dd></div>
+            </dl>
+            <div class="wait-actions" data-note-region="actions">
+              <button type="button" class="btn btn--primary btn--block btn--kiosk" id="btn-again" data-show-when="A1.4">再通知一次</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kiosk__foot" data-note-region="foot">
+          <button type="button" class="text-btn" data-wf-code="A1.1">完成，回首頁</button>
+          <button type="button" class="text-btn" id="btn-human" data-wf-toast="已通知行政人員，馬上有人來協助您">需要協助？找真人</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/proto.js"></script>
+    <script>
+      WfProto.registerPage({
+        defaultCode: "A1.4",
+        apply: function (code, ctx) {},
+      });
+      document.getElementById("btn-again").addEventListener("click", function () {
+        WfProto.toast("已再通知陳怡君");
+      });
+    </script>
+  </body>
+</html>

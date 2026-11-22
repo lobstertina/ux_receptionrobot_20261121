@@ -2,7 +2,7 @@
 
 - 步驟檔：_walk/checkin.json
 - 網址：index.html?p=A1.1&menu=0&notes=0
-- 方式：自動走查（Playwright）；瀏覽器 Google Chrome
+- 方式：自動走查（Playwright）；瀏覽器 Chromium
 - 結果：5／5 步符合
 
 | # | 操作 | 預期 | 實際 | 結果 |
