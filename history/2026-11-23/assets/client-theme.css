@@ -1,0 +1,22 @@
+/* ============================================================
+   客戶外觀層（元件稿模式專用）
+   - 只在 wireframe.config.js 的 visualMode 為 "client" 時載入（proto.js 自動加上，並在 <html> 加 data-wf-visual="client"）；
+     灰階模式不載入，這份檔留空也沒關係。
+   - 做法：讀客戶 Storybook 各元件的實際樣式（顏色、字級、圓角、高度、陰影），寫成下面兩層；
+     只有設計變數檔、沒有 Storybook 時，只寫第 1 層。
+   - 不改頁面 HTML 結構與 class：線框頁照常用 shared.css 的元件 class，這裡只改外觀。
+   - 規則一律寫在最外層選擇器 html[data-wf-visual="client"] 底下（不要寫成 .site …、.admin …），
+     抽屜、對話框、輕提示、浮動選單開啟時會被搬到 <body> 最外層，寫在內層容器底下會漏掉它們的外觀。
+   - 色碼只寫在第 1 層的變數定義（--名稱: 值）；第 2 層一律用 var(--…)。check.mjs 會擋第 2 層直接寫色碼。
+   - 危險色：把客戶的錯誤／危險色指定給 --wf-color-error；它仍只能用在錯誤狀態與危險動作按鈕。
+   ============================================================ */
+
+/* ---------- 第 1 層：設計變數覆蓋 ----------
+   把 shared.css 第 0 段的變數換成客戶的值（例：--g-800 主要動作色、--line 分隔線、--radius 圓角、--fs-body 內文字級），
+   客戶自己的設計變數也在這裡定義（例：--ct-primary、--ct-danger）。 */
+html[data-wf-visual="client"] {
+}
+
+/* ---------- 第 2 層：逐元件外觀 ----------
+   一個元件一段，選擇器開頭固定寫 html[data-wf-visual="client"]，值用第 1 層的變數。例：
+   html[data-wf-visual="client"] .btn--primary { background: var(--ct-primary); border-radius: var(--ct-radius-md); } */

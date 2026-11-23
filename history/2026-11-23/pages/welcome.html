@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.1 歡迎頁</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      .kiosk-top { display: flex; align-items: center; justify-content: space-between; gap: var(--gap-group); }
+      .kiosk-top__brand { margin: 0; font-size: var(--fs-title); font-weight: 700; color: var(--g-900); }
+      .kiosk-top__time { margin: 0; font-size: var(--fs-body); color: var(--g-600); }
+      .kiosk-top .seg { width: 160px; }
+      .kiosk-body { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap-block); align-items: center; }
+      .kiosk-body .robot-face { aspect-ratio: auto; height: 100%; max-height: 420px; }
+      .kiosk-body .robot-face__eyes { gap: 120px; }
+      .kiosk-body .robot-face__eye { width: 72px; height: 96px; }
+      .kiosk-body .robot-face__mouth { width: 160px; height: 80px; border: none; border-radius: 0; display: block; color: var(--g-0); }
+      .kiosk-main { display: flex; flex-direction: column; gap: var(--gap-field); }
+      .kiosk-main__title { margin: 0; font-size: calc(var(--fs-display) * 1.5); font-weight: 700; line-height: var(--lh-tight); color: var(--g-900); }
+      .kiosk-main__sub { margin: 0; font-size: var(--fs-title); color: var(--g-600); }
+      .kiosk-main .btn { min-height: calc(var(--h-btn) * 2); font-size: calc(var(--fs-display) * 1.25); }
+      .kiosk-foot { display: flex; justify-content: flex-end; }
+      .kiosk-foot .text-btn { font-size: var(--fs-title); min-height: calc(var(--h-touch) * 1.5); }
+    </style>
+  </head>
+  <body class="kiosk-page">
+    <div class="kiosk-wrap">
+      <div class="kiosk">
+        <!-- 公司名稱、時間、語言切換 -->
+        <div class="kiosk-top" data-note-region="top">
+          <div>
+            <p class="kiosk-top__brand">星辰科技</p>
+            <p class="kiosk-top__time">11 月 21 日（五）14:30</p>
+          </div>
+          <div class="seg" role="tablist" aria-label="語言" data-wf-tabs>
+            <button type="button" class="seg__item" role="tab" aria-selected="true">中文</button>
+            <button type="button" class="seg__item" role="tab" aria-selected="false">EN</button>
+          </div>
+        </div>
+
+        <div class="kiosk-body">
+          <!-- 機器人表情 -->
+          <div class="robot-face" role="img" aria-label="微笑的機器人表情" data-note-region="hero">
+            <div class="robot-face__eyes"><span class="robot-face__eye"></span><span class="robot-face__eye"></span></div>
+            <svg class="robot-face__mouth" viewBox="0 0 160 80" aria-hidden="true"><path d="M6 0 A74 74 0 0 0 154 0" fill="none" stroke="currentColor" stroke-width="12"/></svg>
+          </div>
+
+          <!-- 問候與兩個入口 -->
+          <section class="kiosk-main" data-note-region="actions" aria-label="開始">
+            <div data-show-when="A1.1" class="kiosk-main">
+            <h1 class="kiosk-main__title">您好，歡迎光臨！</h1>
+            <p class="kiosk-main__sub">已約好會議請點「我要報到」，我會幫您通知同事。</p>
+            <button type="button" class="btn btn--primary btn--block" id="btn-checkin" data-wf-code="A1.2">我要報到</button>
+            </div>
+            <div class="empty" data-show-when="A1.1-2">
+              <p class="empty__title empty__title--lg">暫時無法報到</p>
+              <p class="kiosk__lead">系統連線中斷，請撥行政分機 1234，同事會馬上來協助您。</p>
+            </div>
+          </section>
+        </div>
+
+        <div class="kiosk-foot" data-note-region="help" data-show-when="A1.1">
+          <button type="button" class="text-btn" id="btn-human" data-wf-toast="已通知行政人員，馬上有人來協助您">需要協助？找真人</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/proto.js"></script>
+    <script>
+      WfProto.registerPage({
+        defaultCode: "A1.1",
+        apply: function (code, ctx) {},
+      });
+    </script>
+  </body>
+</html>

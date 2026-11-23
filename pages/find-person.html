@@ -9,6 +9,7 @@
       .find-results .list-row { cursor: pointer; }
       .find-results .list-row[aria-current="true"] { background: var(--g-100); }
       .find-form .input { font-size: var(--fs-section); }
+      .is-host-blocked .find-results, .is-host-blocked .empty { display: none !important; }
     </style>
   </head>
   <body class="kiosk-page">
@@ -46,7 +47,6 @@
               <label class="field__label" for="vcompany">公司名稱（選填）</label>
               <input class="input" id="vcompany" type="text" placeholder="例：光年資訊" data-wf-field="visitor-company" />
             </div>
-            <p class="notice notice--error" data-wf-form-error role="alert" hidden></p>
             <button type="submit" class="btn btn--primary btn--block btn--kiosk" id="btn-notify">通知陳怡君</button>
           </div>
         </form>
@@ -63,6 +63,32 @@
     <script>
       var host = document.getElementById("host");
       var vname = document.getElementById("vname");
+      var hostCol = host.closest(".kiosk__col");
+      var btnNotify = document.getElementById("btn-notify");
+      var currentCode = "A1.5";
+      // 主按鈕一律可按，按下才檢查。文字：選到員工寫「通知〈姓名〉」；沒選到人或姓名欄有錯（A1.5-3）只寫「通知」
+      function selectedName() {
+        if (currentCode === "A1.5-2" || !host.value.trim() || !hostOk(host.value)) return "";
+        var row = document.querySelector('.find-results .list-row[aria-current="true"]');
+        return row ? row.querySelector(".list-row__title").textContent : "";
+      }
+      function syncCta() {
+        if (btnNotify.classList.contains("is-loading")) return;
+        var nameError = vname.closest(".field").classList.contains("is-error");
+        btnNotify.textContent = "通知" + (nameError ? "" : selectedName());
+      }
+      var HOST_ERROR = "姓名只能輸入中文或英文";
+      // 只收中文、英文與字間空白；注音、數字、標點都不行。空白欄不算這條錯誤
+      function hostOk(v) { var t = String(v).trim(); return !t || /^[\p{Script=Han}A-Za-z]+(?: [\p{Script=Han}A-Za-z]+)*$/u.test(t); }
+      function syncHost() {
+        var ok = hostOk(host.value);
+        hostCol.classList.toggle("is-host-blocked", !ok || !host.value.trim());
+        if (ok) WfProto.clearFieldError(host); else WfProto.showFieldError(host, HOST_ERROR);
+        syncCta();
+      }
+      // 注音選字途中不檢查，選完字才檢查
+      host.addEventListener("input", function (e) { if (!e.isComposing) syncHost(); });
+      host.addEventListener("compositionend", syncHost);
       document.querySelectorAll(".find-results .list-row").forEach(function (row) {
         row.addEventListener("click", function () {
           document.querySelectorAll(".find-results .list-row").forEach(function (r) {
@@ -70,24 +96,32 @@
             var b = r.querySelector(".badge"); if (b) b.remove();
           });
           var badge = document.createElement("span"); badge.className = "badge badge--soft"; badge.textContent = "已選擇"; row.appendChild(badge);
-          document.getElementById("btn-notify").textContent = "通知" + row.querySelector(".list-row__title").textContent;
+          syncCta();
         });
       });
       WfProto.registerPage({
         defaultCode: "A1.5",
         apply: function (code, ctx) {
           if (code === "A1.5-2") { host.value = "陳小美"; host.setAttribute("value", "陳小美"); }
-          if (code === "A1.5-3") { WfProto.showFieldError(vname, "請輸入您的姓名"); }
+          currentCode = code;
+          hostCol.classList.toggle("is-host-blocked", !hostOk(host.value) || !host.value.trim());
+          syncCta();
+          if (code === "A1.5-3") { WfProto.showFieldError(vname, "請輸入您的姓名"); syncCta(); }
         },
       });
       WfProto.initForm({
         form: "form-find",
         submitBtn: "btn-notify",
-        fields: [{ id: "vname", rules: [{ test: function (v) { return String(v).trim().length > 0; }, message: "請輸入您的姓名" }] }],
+        fields: [{ id: "host", checkOn: "submit", rules: [{ test: hostOk, message: HOST_ERROR }, { test: function () { return !!selectedName(); }, message: "請選擇要找的人" }] }, { id: "vname", rules: [{ test: function (v) { return String(v).trim().length > 0; }, message: "請輸入您的姓名" }] }],
         loadingLabel: "通知中",
         delay: 700,
+        onInvalid: syncCta,
         onSubmit: function () { return "A1.4"; },
       });
+      // 排在表單檢查之後：姓名錯誤出現或改好時，同步按鈕文字
+      vname.addEventListener("input", syncCta);
+      vname.addEventListener("blur", syncCta);
+      syncCta();
     </script>
   </body>
 </html>

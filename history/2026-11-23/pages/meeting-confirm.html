@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A1.3 會議確認頁</title>
+    <link rel="stylesheet" href="../assets/shared.css" />
+    <style>
+      .confirm-list .desc-list__term { font-size: var(--fs-section); }
+      .confirm-list .desc-list__value { font-size: var(--fs-title); font-weight: 600; }
+    </style>
+  </head>
+  <body class="kiosk-page">
+    <div class="kiosk-wrap">
+      <div class="kiosk">
+        <div class="kiosk__top" data-note-region="top">
+          <h1 class="kiosk__title">請確認這是您的會議</h1>
+        </div>
+
+        <div class="kiosk__body">
+          <!-- 會議資訊 -->
+          <div class="kiosk__col" data-note-region="meeting">
+            <dl class="desc-list desc-list--lined confirm-list">
+              <div class="desc-list__item"><dt class="desc-list__term">訪客</dt><dd class="desc-list__value">王＊明（光年資訊）</dd></div>
+              <div class="desc-list__item"><dt class="desc-list__term">時間</dt><dd class="desc-list__value">今天 15:00–16:00</dd></div>
+              <div class="desc-list__item"><dt class="desc-list__term">地點</dt><dd class="desc-list__value">7 樓 星河會議室</dd></div>
+              <div class="desc-list__item"><dt class="desc-list__term">要見的人</dt><dd class="desc-list__value">陳怡君（業務部）</dd></div>
+            </dl>
+          </div>
+
+          <!-- 確認或改正 -->
+          <div class="kiosk__col" data-note-region="actions">
+            <p class="kiosk__lead" data-show-when="A1.3">確認後，我會馬上通知陳怡君您已抵達。</p>
+            <p class="notice" data-show-when="A1.3-2">會議 15:00 開始，您提早約 40 分鐘抵達。仍可先報到，我會告訴陳怡君您已提早到。</p>
+            <p class="notice notice--error" data-show-when="A1.3-3" role="alert">通知沒有送出去，陳怡君還不知道您已抵達。</p>
+            <button type="button" class="btn btn--primary btn--block btn--kiosk" id="btn-confirm" data-wf-code="A1.4"><span data-show-when="A1.3 A1.3-2">確認報到</span><span data-show-when="A1.3-3">再試一次</span></button>
+            <button type="button" class="btn btn--secondary btn--block btn--kiosk" id="btn-notmine" data-wf-code="A1.2" data-show-when="A1.3 A1.3-2">不是我的會議</button>
+            <button type="button" class="btn btn--secondary btn--block btn--kiosk" data-wf-code="A1.4-2" data-show-when="A1.3-3">改請行政同事協助</button>
+          </div>
+        </div>
+
+        <div class="kiosk__foot" data-note-region="foot">
+          <button type="button" class="text-btn" data-wf-code="A1.1">回首頁</button>
+          <button type="button" class="text-btn" id="btn-human" data-wf-toast="已通知行政人員，馬上有人來協助您">需要協助？找真人</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../assets/proto.js"></script>
+    <script>
+      WfProto.registerPage({
+        defaultCode: "A1.3",
+        apply: function (code, ctx) {},
+      });
+    </script>
+  </body>
+</html>
